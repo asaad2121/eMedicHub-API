@@ -1,0 +1,9 @@
+node_modules
+migrations
+out
+public
+
+# Ignore all Devops files:
+# devops
+# Jenkinsfile
+# **/*.yaml
