@@ -28,8 +28,8 @@ router.post(
 );
 
 router.get('/logout', (req, res) => {
-  res.clearCookie('jwt_doctor');
-  return res.json({ success: true, message: 'Signout success!' });
+    res.clearCookie('jwt_doctor');
+    return res.json({ success: true, message: 'Signout success!' });
 });
 
 router.post(

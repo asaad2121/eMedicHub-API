@@ -12,7 +12,7 @@ const loginPatients = async (req, res) => {
         email: 'johndoe@gmail.com',
         age: 43,
         type: 'patient',
-        _id: 1
+        _id: 1,
     };
 
     const token = jwt.sign({ _id: user?._id }, process.env.JWT_SECRET, { expiresIn: '30m' });
@@ -33,7 +33,6 @@ const loginPatients = async (req, res) => {
 
     res.status(200).json({ success: true, message: 'Login successful', data: userData });
 };
-
 
 module.exports = {
     loginPatients,

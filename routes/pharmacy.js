@@ -27,10 +27,9 @@ router.post(
     loginPharma
 );
 
-
 router.get('/logout', (req, res) => {
-  res.clearCookie('jwt_pharma');
-  return res.json({ success: true, message: 'Signout success!' });
+    res.clearCookie('jwt_pharma');
+    return res.json({ success: true, message: 'Signout success!' });
 });
 
 module.exports = router;

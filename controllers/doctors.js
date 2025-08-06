@@ -13,7 +13,7 @@ const loginDoctors = async (req, res) => {
         email: 'johndoe@gmail.com',
         age: 43,
         type: 'doctor',
-        _id: 1
+        _id: 1,
     };
 
     const token = jwt.sign({ _id: user?._id }, process.env.JWT_SECRET, { expiresIn: '30m' });
