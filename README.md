@@ -1,6 +1,5 @@
 # eMedicHub-API
 
-
 ## 🛠️ Getting Started
 
 ### 1. Clone the Repository
@@ -32,14 +31,13 @@ This uses `nodemon` to auto-reload on changes.
 
 ## 🧪 Scripts
 
-| Command          | Description                        |
-|------------------|------------------------------------|
-| `npm run dev`    | Start server with **nodemon**      |
-| `npm run format` | Format code with **Prettier**      |
-| `npm test`       | Placeholder for running tests      |
+| Command          | Description                   |
+| ---------------- | ----------------------------- |
+| `npm run dev`    | Start server with **nodemon** |
+| `npm run format` | Format code with **Prettier** |
+| `npm test`       | Placeholder for running tests |
 
 ---
-
 
 ## 🌿 Working with Git
 
