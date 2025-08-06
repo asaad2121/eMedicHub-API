@@ -3,7 +3,9 @@ const bodyParser = require('body-parser');
 const cookieParser = require('cookie-parser');
 const cors = require('cors');
 require('dotenv').config({ quiet: true });
-const userRouter = require('./routes/users');
+const patientsRouter = require('./routes/patients');
+const doctorsRouter = require('./routes/doctors');
+const pharmaRouter = require('./routes/pharmacy');
 
 const app = express();
 
@@ -17,8 +19,11 @@ app.use(
     })
 );
 
-app.use('/users', userRouter);
+app.use('/patients', patientsRouter);
+app.use('/doctors', doctorsRouter);
+app.use('/pharma', pharmaRouter);
 
-app.listen(8080, () => {
-    console.log('Server is running on port 8080');
+const PORT = process.env.PORT || 8080;
+app.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
 });

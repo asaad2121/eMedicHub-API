@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { loginUsers, signupUsers } = require('../controllers/users');
+const { loginDoctors, addNewPatient } = require('../controllers/doctors');
 const { check, validationResult } = require('express-validator');
 
 router.post(
@@ -24,11 +24,16 @@ router.post(
 
         next();
     },
-    loginUsers
+    loginDoctors
 );
 
+router.get('/logout', (req, res) => {
+  res.clearCookie('jwt_doctor');
+  return res.json({ success: true, message: 'Signout success!' });
+});
+
 router.post(
-    '/signup',
+    '/addNewPatient',
     [
         check('email', 'Email cannot be empty').notEmpty(),
         check('email', 'Email is not Valid')
@@ -51,12 +56,7 @@ router.post(
         }
         next();
     },
-    signupUsers
+    addNewPatient
 );
-
-exports.signout = (req, res) => {
-    res.clearCookie('t');
-    return res.json({ success: true, message: 'Signout success!' });
-};
 
 module.exports = router;
