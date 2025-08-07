@@ -2,6 +2,8 @@ const express = require('express');
 const router = express.Router();
 const { loginPharma } = require('../controllers/pharmacy.js');
 const { check, validationResult } = require('express-validator');
+const { authenticateToken } = require('../middleware/session-authentication-middleware')
+// (res, req, next) => authenticateToken('pharma', res, req, next),
 
 router.post(
     '/login',

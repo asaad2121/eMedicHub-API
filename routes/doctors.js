@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { loginDoctors, addNewPatient } = require('../controllers/doctors');
 const { check, validationResult } = require('express-validator');
+const { authenticateToken } = require('../middleware/session-authentication-middleware')
 
 router.post(
     '/login',
@@ -47,6 +48,7 @@ router.post(
         check('password', 'Password must contain 6 characters').isLength({ min: 6, max: 64 }),
         check('password', 'Password must contain a digit').matches(/\d/),
     ],
+    (res, req, next) => authenticateToken('doctor', res, req, next),
     (req, res, next) => {
         const errors = validationResult(req);
 
