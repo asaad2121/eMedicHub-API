@@ -1,38 +1,63 @@
 const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
+const { DynamoDBClient, QueryCommand } = require('@aws-sdk/client-dynamodb');
+
+const client = new DynamoDBClient({ region: process.env.AWS_REGION });
 
 const loginDoctors = async (req, res) => {
     const { email, password } = req.body;
-    // Check if
-    // 1. User exists in patients DB
-    // 2. Password is correct
 
-    // TEST
-    const user = {
-        firstName: 'John',
-        lastName: 'Doe',
-        email: 'johndoe@gmail.com',
-        age: 43,
-        type: 'doctor',
-        _id: 1,
-    };
+    try {
+        const command = new QueryCommand({
+            TableName: 'Doctors',
+            IndexName: 'email-index',
+            KeyConditionExpression: 'email = :email',
+            ExpressionAttributeValues: {
+                ':email': { S: email },
+            },
+        });
 
-    const token = jwt.sign({ _id: user?._id }, process.env.JWT_SECRET, { expiresIn: '30m' });
-    res.cookie('jwt_doctor', token, {
-        httpOnly: true,
-        maxAge: 1800000,
-        secure: process.env.ENVIRONMENT === 'prod',
-        sameSite: 'Lax',
-    });
+        const response = await client.send(command);
+        const doctor = response.Items?.[0];
 
-    const userData = {
-        name: user?.name,
-        email: user?.email,
-        age: user?.age,
-        type: user?.type,
-        token,
-    };
+        if (!doctor) {
+            return res.status(404).json({ success: false, message: 'Doctor not found' });
+        }
 
-    res.status(200).json({ success: true, message: 'Login successful', data: userData });
+        const hashedPassword = doctor.password.S;
+        const isMatch = await bcrypt.compare(password, hashedPassword);
+        if (!isMatch) {
+            return res.status(401).json({ success: false, message: 'Invalid credentials' });
+        }
+
+        const token = jwt.sign({ _id: doctor.id.S }, process.env.JWT_SECRET, { expiresIn: '30m' });
+
+        res.cookie('jwt_doctor', token, {
+            httpOnly: true,
+            maxAge: 1800000, // 30 minutes
+            secure: process.env.ENVIRONMENT === 'prod',
+            sameSite: 'Lax',
+        });
+
+        console.log(doctor);
+        const userData = {
+            id: doctor.id.S,
+            first_name: doctor.first_name?.S,
+            last_name: doctor.last_name?.S,
+            email: doctor.email.S,
+            type: 'doctor',
+            token,
+        };
+
+        return res.status(200).json({
+            success: true,
+            message: 'Login successful',
+            data: userData,
+        });
+    } catch (err) {
+        console.error('Login error:', err);
+        return res.status(500).json({ success: false, message: 'Internal server error' });
+    }
 };
 
 const addNewPatient = async (req, res) => {

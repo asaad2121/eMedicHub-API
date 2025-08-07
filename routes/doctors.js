@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { loginDoctors, addNewPatient } = require('../controllers/doctors');
 const { check, validationResult } = require('express-validator');
-const { authenticateToken } = require('../middleware/session-authentication-middleware')
+const { authenticateToken } = require('../middleware/session-authentication-middleware');
 
 router.post(
     '/login',
