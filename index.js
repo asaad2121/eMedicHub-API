@@ -21,9 +21,9 @@ app.use(
     })
 );
 
-app.use('/patients', (res, req, next) => authenticateToken('patient', res, req, next), patientsRouter);
-app.use('/doctors', (res, req, next) => authenticateToken('doctor', res, req, next), doctorsRouter);
-app.use('/pharma', (res, req, next) => authenticateToken('pharma', res, req, next), pharmaRouter);
+app.use('/patients', patientsRouter);
+app.use('/doctors', doctorsRouter);
+app.use('/pharma', pharmaRouter);
 
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => {
