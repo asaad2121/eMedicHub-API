@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { loginDoctors, addNewPatient } = require('../controllers/doctors');
+const { loginDoctors, addNewPatient, getAllDoctors } = require('../controllers/doctors');
 const { check, validationResult } = require('express-validator');
 const { authenticateToken } = require('../middleware/session-authentication-middleware');
 
@@ -60,5 +60,7 @@ router.post(
     },
     addNewPatient
 );
+
+router.get('/getDoctors', getAllDoctors);
 
 module.exports = router;
