@@ -1,37 +1,57 @@
+const { QueryCommand } = require('@aws-sdk/client-dynamodb');
+const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+require('dotenv').config({ quiet: true });
 
 const loginPatients = async (req, res) => {
     const { email, password } = req.body;
-    // Check if
-    // 1. User exists in patients DB
-    // 2. Password is correct
 
-    // TEST
-    const user = {
-        name: 'John Doe',
-        email: 'johndoe@gmail.com',
-        age: 43,
-        type: 'patient',
-        _id: 1,
-    };
+    try {
+        const command = new QueryCommand({
+            TableName: 'Patients',
+            IndexName: 'email-index',
+            KeyConditionExpression: 'email = :email',
+            ExpressionAttributeValues: {
+                ':email': { S: email },
+            },
+        });
 
-    const token = jwt.sign({ _id: user?._id }, process.env.JWT_SECRET, { expiresIn: '30m' });
-    res.cookie('jwt_patient', token, {
-        httpOnly: true,
-        maxAge: 1800000,
-        secure: process.env.ENVIRONMENT === 'prod',
-        sameSite: 'Lax',
-    });
+        const response = await client.send(command);
+        const patient = response.Items?.[0];
 
-    const userData = {
-        name: user?.name,
-        email: user?.email,
-        age: user?.age,
-        type: user?.type,
-        token,
-    };
+        if (!patient) return res.status(404).json({ success: false, message: 'Patient not found' });
 
-    res.status(200).json({ success: true, message: 'Login successful', data: userData });
+        const hashedPassword = patient.password.S;
+        const isMatch = await bcrypt.compare(password, hashedPassword);
+        if (!isMatch) return res.status(401).json({ success: false, message: 'Invalid credentials' });
+
+        const token = jwt.sign({ _id: patient.id.S }, process.env.JWT_SECRET, { expiresIn: '30m' });
+
+        res.cookie('jwt_patient', token, {
+            httpOnly: true,
+            maxAge: 1800000,
+            secure: process.env.ENVIRONMENT === 'prod',
+            sameSite: 'Lax',
+        });
+
+        const userData = {
+            id: patient.id.S,
+            first_name: patient.first_name?.S,
+            last_name: patient.last_name?.S,
+            email: patient.email.S,
+            type: 'patient',
+            token,
+        };
+
+        return res.status(200).json({
+            success: true,
+            message: 'Login successful',
+            data: userData,
+        });
+    } catch (err) {
+        console.error('Patient login error:', err);
+        return res.status(500).json({ success: false, message: 'Internal server error' });
+    }
 };
 
 module.exports = {

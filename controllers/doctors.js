@@ -1,8 +1,35 @@
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
-const { DynamoDBClient, QueryCommand } = require('@aws-sdk/client-dynamodb');
+const { DynamoDBClient, QueryCommand, ScanCommand } = require('@aws-sdk/client-dynamodb');
 
 const client = new DynamoDBClient({ region: process.env.AWS_REGION });
+
+const getAllDoctors = async (req, res) => {
+    try {
+        const command = new ScanCommand({
+            TableName: 'Doctors',
+        });
+
+        const response = await client.send(command);
+
+        const doctors = response.Items.map((doc) => ({
+            id: doc.id.S,
+            first_name: doc.first_name?.S,
+            last_name: doc.last_name?.S,
+            dob: doc.dob?.S,
+            email: doc.email?.S,
+            visiting_hours: doc.visiting_hours?.M || {},
+        }));
+
+        return res.status(200).json({
+            success: true,
+            data: doctors,
+        });
+    } catch (err) {
+        console.error('Error fetching doctors:', err);
+        return res.status(500).json({ success: false, message: 'Internal server error' });
+    }
+};
 
 const loginDoctors = async (req, res) => {
     const { email, password } = req.body;
@@ -39,7 +66,6 @@ const loginDoctors = async (req, res) => {
             sameSite: 'Lax',
         });
 
-        console.log(doctor);
         const userData = {
             id: doctor.id.S,
             first_name: doctor.first_name?.S,
@@ -86,5 +112,6 @@ const addNewPatient = async (req, res) => {
 
 module.exports = {
     loginDoctors,
+    getAllDoctors,
     addNewPatient,
 };
