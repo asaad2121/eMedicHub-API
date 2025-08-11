@@ -92,3 +92,25 @@ npm run format
 ```
 
 ---
+
+## ⚠️ Resetting DynamoDB (Local Testing Only)
+
+We have a script to reset (delete and recreate) all DynamoDB tables and seed initial data for local development and testing purposes.
+
+**Important:**  
+This script **must only be run in your local development environment**. Running it on production or shared environments can result in data loss!
+
+### How it works:
+
+- The reset script checks environment variable `ENVIRONMENT` to ensure it only runs when:
+    - `ENVIRONMENT=dev`
+
+- If these conditions are not met, the script will refuse to run.
+
+### How to run:
+
+```bash
+npm run reset-db
+
+---
+```

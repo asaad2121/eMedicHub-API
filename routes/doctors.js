@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { loginDoctors, addNewPatient, getAllDoctors } = require('../controllers/doctors');
+const { loginDoctors, addNewPatientPost, addNewPatientGet, getAllDoctors } = require('../controllers/doctors');
 const { check, validationResult } = require('express-validator');
 const { authenticateToken } = require('../middleware/session-authentication-middleware');
 
@@ -33,6 +33,12 @@ router.get('/logout', (req, res) => {
     return res.json({ success: true, message: 'Signout success!' });
 });
 
+router.get(
+    '/addNewPatient',
+    // (req, res, next) => authenticateToken('doctor', req, res, next),
+    addNewPatientGet
+);
+
 router.post(
     '/addNewPatient',
     [
@@ -40,15 +46,20 @@ router.post(
         check('email', 'Email is not Valid')
             .matches(/.+\@.+\..+/)
             .isLength({ min: 4, max: 35 }),
-        check('firstName', 'First Name is required').notEmpty(),
-        check('firstName', 'First Name must contain 6 characters').isLength({ min: 2, max: 64 }),
-        check('lastName', 'Last Name is required').notEmpty(),
-        check('lastName', 'Last Name must contain 6 characters').isLength({ min: 2, max: 64 }),
+        check('first_name', 'First Name is required').notEmpty(),
+        check('first_name', 'First Name must contain 6 characters').isLength({ min: 2, max: 64 }),
+        check('last_name', 'Last Name is required').notEmpty(),
+        check('last_name', 'Last Name must contain 6 characters').isLength({ min: 2, max: 64 }),
         check('password', 'Password is required').notEmpty(),
         check('password', 'Password must contain 6 characters').isLength({ min: 6, max: 64 }),
         check('password', 'Password must contain a digit').matches(/\d/),
+        check('blood_grp', 'Blood group is required').notEmpty(),
+        check('phone_no', 'Phone number is required').notEmpty(),
+        check('gp_id', 'GP ID is required').notEmpty(),
+        check('id_type', 'Identification Type is required').notEmpty(),
+        check('id_number', 'Identification Number is required').notEmpty(),
     ],
-    (res, req, next) => authenticateToken('doctor', res, req, next),
+    // (req, res, next) => authenticateToken('doctor', req, res, next),
     (req, res, next) => {
         const errors = validationResult(req);
 
@@ -58,7 +69,7 @@ router.post(
         }
         next();
     },
-    addNewPatient
+    addNewPatientPost
 );
 
 router.get('/getDoctors', getAllDoctors);

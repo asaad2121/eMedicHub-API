@@ -15,7 +15,7 @@ const addPatient = async () => {
     const hashedPassword = await hashPassword('Test@123');
 
     const patient = {
-        id: { S: 'PAT-001' },
+        id: { S: 'PAT-0001' },
         first_name: { S: 'John' },
         last_name: { S: 'Doe' },
         dob: { S: '1990-05-20' },
