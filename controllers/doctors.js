@@ -1,6 +1,8 @@
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
-const { DynamoDBClient, QueryCommand, ScanCommand } = require('@aws-sdk/client-dynamodb');
+const { DynamoDBClient, QueryCommand, ScanCommand, PutItemCommand } = require('@aws-sdk/client-dynamodb');
+const { IdTypes, BloodGroups } = require('./utils/constants');
+const { verifyPassword, generateHashedPassword } = require('./utils/functions');
 
 const client = new DynamoDBClient({ region: process.env.AWS_REGION });
 
@@ -51,8 +53,7 @@ const loginDoctors = async (req, res) => {
             return res.status(404).json({ success: false, message: 'Doctor not found' });
         }
 
-        const hashedPassword = doctor.password.S;
-        const isMatch = await bcrypt.compare(password, hashedPassword);
+        const isMatch = await verifyPassword(password, doctor.password.S);
         if (!isMatch) {
             return res.status(401).json({ success: false, message: 'Invalid credentials' });
         }
@@ -86,32 +87,131 @@ const loginDoctors = async (req, res) => {
     }
 };
 
-const addNewPatient = async (req, res) => {
-    const { email, password, firstName, lastName, age } = req.body;
-
-    // const patientExists = findOne Patient in DB
-    // if (patientExists) {
-    //     return res.status(403).json({ success: false, message: 'Patient with the same email already exists' });
-    // }
-
+const addNewPatientGet = async (req, res) => {
     try {
-        const patient = {
-            firstName,
-            lastName,
-            age,
-            email,
-        };
-        // await save patient in DB;
+        const command = new ScanCommand({
+            TableName: 'Doctors',
+            ProjectionExpression: 'id, first_name, last_name, visiting_hours',
+        });
 
-        res.status(200).json({ success: true, message: 'Patient added successfully!', data: patient });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ success: false, message: 'Error during patient signup', error: error.message });
+        const response = await client.send(command);
+
+        const doctorsList = response.Items.map((doc) => ({
+            id: doc.id.S,
+            name: `${doc.first_name?.S || ''} ${doc.last_name?.S || ''}`.trim(),
+            visiting_hours: doc.visiting_hours?.M || {},
+        }));
+
+        const patientsCommand = new ScanCommand({
+            TableName: 'Patients',
+            ProjectionExpression: 'id',
+        });
+        const patientsResponse = await client.send(patientsCommand);
+
+        const ids = patientsResponse.Items.map((item) => {
+            const idStr = item.id.S;
+            const match = idStr.match(/^PAT-(\d{4})$/);
+            return match ? parseInt(match[1], 10) : 0;
+        });
+
+        const maxId = ids.length > 0 ? Math.max(...ids) : 0;
+        const nextIdNum = maxId + 1;
+        const nextId = `PAT-${nextIdNum.toString().padStart(4, '0')}`;
+
+        return res.status(200).json({
+            success: true,
+            message: 'Doctors list fetched successfully',
+            data: {
+                doctors: doctorsList,
+                nextPatientId: nextId,
+                idTypes: Object.values(IdTypes),
+                bloodGroups: Object.values(BloodGroups),
+            },
+        });
+    } catch (err) {
+        console.error('Error fetching doctors for patient form:', err);
+        return res.status(500).json({ success: false, message: 'Internal server error' });
+    }
+};
+
+const addNewPatientPost = async (req, res) => {
+    try {
+        const {
+            id,
+            first_name,
+            last_name,
+            dob,
+            email,
+            password,
+            blood_grp,
+            address,
+            phone_no,
+            gp_id,
+            id_type,
+            id_number,
+            last_gp_visited,
+        } = req.body;
+
+        if (
+            !id ||
+            !first_name ||
+            !last_name ||
+            !dob ||
+            !email ||
+            !password ||
+            !blood_grp ||
+            !phone_no ||
+            !gp_id ||
+            !id_type ||
+            !id_number
+        ) {
+            return res.status(400).json({ success: false, message: 'Missing required fields' });
+        }
+
+        if (!Object.values(IdTypes).includes(id_type))
+            return res.status(400).json({ success: false, message: 'Invalid id_type' });
+        if (!Object.values(BloodGroups).includes(blood_grp))
+            return res.status(400).json({ success: false, message: 'Invalid blood_grp' });
+
+        const hashedPassword = await generateHashedPassword(password);
+
+        const patientItem = {
+            id: { S: id },
+            first_name: { S: first_name },
+            last_name: { S: last_name },
+            dob: { S: dob },
+            email: { S: email },
+            password: { S: hashedPassword },
+            blood_grp: { S: blood_grp },
+            address: { S: address || '' },
+            phone_no: { S: phone_no },
+            gp_id: { S: gp_id },
+            id_type: { S: id_type },
+            id_number: { S: id_number },
+            last_gp_visited: { S: last_gp_visited || '' },
+        };
+
+        const command = new PutItemCommand({
+            TableName: 'Patients',
+            Item: patientItem,
+            ConditionExpression: 'attribute_not_exists(id)',
+        });
+
+        await client.send(command);
+
+        return res.status(201).json({ success: true, message: 'Patient added successfully' });
+    } catch (err) {
+        console.error('Error adding patient:', err);
+        if (err.name === 'ConditionalCheckFailedException') {
+            return res.status(409).json({ success: false, message: 'Patient with this ID already exists' });
+        }
+        return res.status(500).json({ success: false, message: 'Internal server error' });
     }
 };
 
 module.exports = {
     loginDoctors,
     getAllDoctors,
-    addNewPatient,
+    addNewPatientPost,
+    addNewPatientGet,
 };

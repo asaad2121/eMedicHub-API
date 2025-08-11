@@ -6,6 +6,7 @@
     "scripts": {
         "test": "echo \"Error: no test specified\" && exit 1",
         "format": "prettier --write .",
+        "reset-db": "node scripts/reset-dynamodb.js",
         "dev": "nodemon app.js"
     },
     "author": "",
