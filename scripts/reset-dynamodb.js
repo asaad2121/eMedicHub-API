@@ -10,13 +10,23 @@ require('dotenv').config({ quiet: true });
 
 const client = new DynamoDBClient({ region: process.env.AWS_REGION });
 
-async function deleteAllTables() {
+const projectTables = ['Medicines', 'Doctors', 'Patients', 'Appointments', 'Pharmacy', 'Orders', 'OrderCounter'];
+
+async function deleteProjectTables() {
     try {
         const tablesData = await client.send(new ListTablesCommand({}));
-        const tables = tablesData.TableNames || [];
-        console.log('Tables to delete:', tables);
+        const existingTables = tablesData?.TableNames || [];
 
-        for (const tableName of tables) {
+        const tablesToDelete = existingTables?.filter((t) => projectTables.includes(t));
+
+        if (tablesToDelete?.length === 0) {
+            console.log('No project tables found to delete.');
+            return;
+        }
+
+        console.log('Tables to delete:', tablesToDelete);
+
+        for (const tableName of tablesToDelete) {
             console.log(`Deleting table: ${tableName}`);
             await client.send(new DeleteTableCommand({ TableName: tableName }));
 
@@ -86,13 +96,14 @@ async function waitForTableActive(tableName) {
 }
 
 async function main() {
+    return; // Do not use it
     try {
         if (process.env.ENVIRONMENT !== 'dev') {
             console.error('ERROR: Reset script can only be run in local development environment!');
             process.exit(1);
         }
 
-        await deleteAllTables();
+        await deleteProjectTables();
 
         // Create Doctors table and wait for it to be ACTIVE
         await runScript('node scripts/create-doctors-table.js');
@@ -102,9 +113,32 @@ async function main() {
         await runScript('node scripts/create-patients-table.js');
         await waitForTableActive('Patients');
 
-        // Now tables are active, add doctors and patients
+        // Create Pharmacy table and wait for it to be ACTIVE
+        await runScript('node scripts/create-pharmacy-table.js');
+        await waitForTableActive('Pharmacy');
+
+        // Create Medicines table and wait for it to be ACTIVE
+        await runScript('node scripts/create-medicines-table.js');
+        await waitForTableActive('Medicines');
+
+        // Create Orders table and wait for it to be ACTIVE
+        await runScript('node scripts/create-orders-table.js');
+        await waitForTableActive('Orders');
+
+        // Create Appointments table and wait for it to be ACTIVE
+        await runScript('node scripts/create-appointments-table.js');
+        await waitForTableActive('Appointments');
+
+        // Create OrderCounter table and wait for it to be ACTIVE
+        await runScript('node scripts/populate-order-counter.js');
+        await waitForTableActive('OrderCounter');
+
+        // Now tables are active, add doctors, patients, pharmacy & medicines
         await runScript('node scripts/add-doctor-to-table.js');
         await runScript('node scripts/add-patient-to-table.js');
+        await runScript('node scripts/add-pharmacy-to-table.js');
+        await runScript('node scripts/add-medicines-from-csv.js');
+        await runScript('node scripts/populate-order-counter.js');
 
         console.log('All tables reset and seeded successfully.');
     } catch (err) {

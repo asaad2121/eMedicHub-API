@@ -1,5 +1,4 @@
 const jwt = require('jsonwebtoken');
-const bcrypt = require('bcryptjs');
 const { DynamoDBClient, QueryCommand, ScanCommand, PutItemCommand } = require('@aws-sdk/client-dynamodb');
 const { IdTypes, BloodGroups } = require('./utils/constants');
 const { verifyPassword, generateHashedPassword } = require('./utils/functions');
@@ -25,6 +24,7 @@ const getAllDoctors = async (req, res) => {
 
         return res.status(200).json({
             success: true,
+            message: 'All doctors fetched',
             data: doctors,
         });
     } catch (err) {
@@ -149,24 +149,7 @@ const addNewPatientPost = async (req, res) => {
             gp_id,
             id_type,
             id_number,
-            last_gp_visited,
         } = req.body;
-
-        if (
-            !id ||
-            !first_name ||
-            !last_name ||
-            !dob ||
-            !email ||
-            !password ||
-            !blood_grp ||
-            !phone_no ||
-            !gp_id ||
-            !id_type ||
-            !id_number
-        ) {
-            return res.status(400).json({ success: false, message: 'Missing required fields' });
-        }
 
         if (!Object.values(IdTypes).includes(id_type))
             return res.status(400).json({ success: false, message: 'Invalid id_type' });
@@ -188,7 +171,7 @@ const addNewPatientPost = async (req, res) => {
             gp_id: { S: gp_id },
             id_type: { S: id_type },
             id_number: { S: id_number },
-            last_gp_visited: { S: last_gp_visited || '' },
+            last_gp_visited: { S: gp_id || '' },
         };
 
         const command = new PutItemCommand({

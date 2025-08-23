@@ -6,8 +6,7 @@ require('dotenv').config({ quiet: true });
 const patientsRouter = require('./routes/patients');
 const doctorsRouter = require('./routes/doctors');
 const pharmaRouter = require('./routes/pharmacy');
-
-const { authenticateToken } = require('./middleware/session-authentication-middleware');
+const ordersRouter = require('./routes/orders');
 
 const app = express();
 
@@ -24,6 +23,7 @@ app.use(
 app.use('/patients', patientsRouter);
 app.use('/doctors', doctorsRouter);
 app.use('/pharma', pharmaRouter);
+app.use('/orders', ordersRouter);
 
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => {
