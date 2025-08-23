@@ -24,11 +24,10 @@ const run = async () => {
                 ProjectionExpression: 'id',
             });
 
-            const ordersResponse = await client.send(command);
+            const response = await client.send(command);
 
-            const ids = ordersResponse.Items.map((item) => {
-                const idStr = item.id.S;
-                return getNumericId(idStr);
+            const ids = response.Items.map((item) => {
+                return getNumericId(item.id.S);
             });
 
             const maxId = ids?.length > 0 ? Math.max(...ids) : 0;
