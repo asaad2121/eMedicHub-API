@@ -6,10 +6,9 @@ const { check, validationResult } = require('express-validator');
 
 router.get(
     '/searchMedicines',
-    // (req, res, next) => authenticateToken('doctor', req, res, next),
+    (req, res, next) => authenticateToken('doctor', req, res, next),
     searchMedicines
 );
-
 
 router.post(
     '/createNewOrder',
@@ -39,7 +38,7 @@ router.post(
 
         next();
     },
-    // (req, res, next) => authenticateToken('doctor', req, res, next),
+    (req, res, next) => authenticateToken('doctor', req, res, next),
     createNewOrder
 );
 

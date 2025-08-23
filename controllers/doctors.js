@@ -1,7 +1,7 @@
 const jwt = require('jsonwebtoken');
 const { DynamoDBClient, QueryCommand, ScanCommand, PutItemCommand } = require('@aws-sdk/client-dynamodb');
 const { IdTypes, BloodGroups } = require('./utils/constants');
-const { verifyPassword, generateHashedPassword } = require('./utils/functions');
+const { verifyPassword, generateHashedPassword, getNextId } = require('./utils/functions');
 
 const client = new DynamoDBClient({ region: process.env.AWS_REGION });
 
@@ -102,20 +102,7 @@ const addNewPatientGet = async (req, res) => {
             visiting_hours: doc.visiting_hours?.M || {},
         }));
 
-        const patientsCommand = new ScanCommand({
-            TableName: 'Patients',
-            ProjectionExpression: 'id',
-        });
-        const patientsResponse = await client.send(patientsCommand);
-
-        const ids = patientsResponse.Items.map((item) => {
-            const idStr = item.id.S;
-            const match = idStr.match(/^PAT-(\d{4})$/);
-            return match ? parseInt(match[1], 10) : 0;
-        });
-
-        const maxId = ids.length > 0 ? Math.max(...ids) : 0;
-        const nextIdNum = maxId + 1;
+        const nextIdNum = await getNextId('Patients');
         const nextId = `PAT-${nextIdNum.toString().padStart(4, '0')}`;
 
         return res.status(200).json({

@@ -1,42 +1,5 @@
-const bcrypt = require('bcryptjs');
-const { UpdateItemCommand, DynamoDBClient } = require('@aws-sdk/client-dynamodb');
+const { GetItemCommand, ScanCommand, DynamoDBClient } = require('@aws-sdk/client-dynamodb');
 const client = new DynamoDBClient({ region: process.env.AWS_REGION });
-
-const generateHashedPassword = async (password) => {
-    const saltRounds = 10;
-    const salt = await bcrypt.genSalt(saltRounds);
-    const hashedPassword = await bcrypt.hash(password, salt);
-    return hashedPassword;
-};
-
-const verifyPassword = async (password, hashedPassword) => {
-    const result = await bcrypt.compare(password, hashedPassword);
-    return result;
-};
-
-/**
- * Fetches and atomically increments a counter.
- * @param {string} id_name - Table name (e.g., 'Orders')
- * @returns {Promise<number>} - Next numeric value of the counter
- */
-const getNextId = async (id_name) => {
-    const command = new UpdateItemCommand({
-        TableName: 'OrderCounter',
-        Key: {
-            id: { S: id_name },
-        },
-        UpdateExpression: 'SET lastValue = if_not_exists(lastValue, :start) + :inc',
-        ExpressionAttributeValues: {
-            ':start': { N: '0' },
-            ':inc': { N: '1' },
-        },
-        ReturnValues: 'UPDATED_NEW',
-    });
-
-    const result = await client.send(command);
-
-    return result.Attributes.lastValue.N;
-};
 
 const parseTime = (str) => {
     const [h, m] = str.split(':').map(Number);
@@ -83,12 +46,52 @@ const getAvailableSlots = (visitingHours, appointments, slotDuration = 30) => {
     return slots;
 };
 
+const fetchDoctorAppointments = async (doctor_id, date) => {
+    const docResp = await client.send(
+        new GetItemCommand({
+            TableName: 'Doctors',
+            Key: { id: { S: doctor_id } },
+        })
+    );
+
+    if (!docResp.Item) {
+        throw new Error('Doctor not found');
+    }
+
+    const dayOfWeek = getDayOfWeek(date);
+    const dayHours = docResp.Item.visiting_hours.M[dayOfWeek]?.M;
+
+    if (!dayHours || !dayHours.start?.S || !dayHours.end?.S) {
+        throw new Error('Doctor has no working hours on this day');
+    }
+
+    const workingHours = {
+        start: dayHours.start.S,
+        end: dayHours.end.S,
+    };
+
+    const apptResp = await client.send(
+        new ScanCommand({
+            TableName: 'Appointments',
+            FilterExpression: '#doc = :doc AND #dt = :date',
+            ExpressionAttributeNames: { '#doc': 'doctor_id', '#dt': 'date' },
+            ExpressionAttributeValues: { ':doc': { S: doctor_id }, ':date': { S: date } },
+            ProjectionExpression: 'start_time, end_time',
+        })
+    );
+
+    const appointments = (apptResp.Items || []).map((i) => ({
+        start: i.start_time.S,
+        end: i.end_time.S,
+    }));
+
+    return { workingHours, appointments };
+};
+
 module.exports = {
-    generateHashedPassword,
-    verifyPassword,
-    getNextId,
     parseTime,
     formatTime,
     getDayOfWeek,
     getAvailableSlots,
+    fetchDoctorAppointments,
 };
