@@ -17,8 +17,6 @@ const getAllDoctors = async (req, res) => {
             id: doc.id.S,
             first_name: doc.first_name?.S,
             last_name: doc.last_name?.S,
-            dob: doc.dob?.S,
-            email: doc.email?.S,
             visiting_hours: doc.visiting_hours?.M || {},
         }));
 

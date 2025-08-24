@@ -31,9 +31,9 @@ const searchMedicines = async (req, res) => {
             id: item.id?.S,
             name: item.name?.S,
             price: parseFloat(item.price?.N),
-            // company: item.company?.S,
-            // salt: item.salt?.S,
-            // prescription_required: item.prescription_required?.BOOL || false,
+            company: item.company?.S,
+            salt: item.salt?.S,
+            prescription_required: item.prescription_required?.BOOL || false,
         }));
 
         return res.status(200).json({ success: true, data: medicines, message: 'Medicines fetched' });
@@ -97,7 +97,32 @@ const createNewOrder = async (req, res) => {
     }
 };
 
+const getAllPharmacy = async (req, res) => {
+    try {
+        const command = new ScanCommand({
+            TableName: 'Pharmacy',
+        });
+
+        const response = await client.send(command);
+
+        const pharmacy = response.Items.map((pharma) => ({
+            id: pharma.id.S,
+            name: pharma.name.S,
+        }));
+
+        return res.status(200).json({
+            success: true,
+            message: 'All Pharmacy fetched',
+            data: pharmacy,
+        });
+    } catch (err) {
+        console.error('Error fetching pharmacy:', err);
+        return res.status(500).json({ success: false, message: 'Internal server error' });
+    }
+};
+
 module.exports = {
     searchMedicines,
     createNewOrder,
+    getAllPharmacy,
 };
