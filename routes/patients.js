@@ -28,7 +28,9 @@ router.post(
     '/createNewAppointment',
     [
         check('doctor_id', 'doctor id cannot be empty').notEmpty(),
+        check('doctor_name', 'doctor name cannot be empty').notEmpty(),
         check('patient_id', 'patient id is required').notEmpty(),
+        check('patient_name', 'patient name cannot be empty').notEmpty(),
         check('date', 'date is required').notEmpty(),
         check('start_time', 'start time is required').notEmpty(),
     ],
