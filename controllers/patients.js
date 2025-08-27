@@ -21,7 +21,7 @@ const checkDoctorAvailability = async (req, res) => {
 
 const createNewAppointment = async (req, res) => {
     try {
-        const { doctor_id, patient_id, date, start_time } = req.body;
+        const { doctor_id, patient_id, date, start_time, doctor_name, patient_name } = req.body;
         const { workingHours, appointments } = await fetchDoctorAppointments(doctor_id, date);
 
         const slotStart = parseTime(start_time);
@@ -40,7 +40,9 @@ const createNewAppointment = async (req, res) => {
             Item: {
                 id: { S: appointmentId },
                 doctor_id: { S: doctor_id },
+                doctor_name: { S: doctor_name },
                 patient_id: { S: patient_id },
+                patient_name: { S: patient_name },
                 date: { S: date },
                 start_time: { S: start_time },
                 end_time: {

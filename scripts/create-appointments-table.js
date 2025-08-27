@@ -9,7 +9,9 @@ const params = {
     AttributeDefinitions: [
         { AttributeName: 'id', AttributeType: 'S' },
         { AttributeName: 'patient_id', AttributeType: 'S' },
+        { AttributeName: 'patient_name', AttributeType: 'S' },
         { AttributeName: 'doctor_id', AttributeType: 'S' },
+        { AttributeName: 'doctor_name', AttributeType: 'S' },
     ],
     KeySchema: [{ AttributeName: 'id', KeyType: 'HASH' }],
     GlobalSecondaryIndexes: [
