@@ -6,7 +6,7 @@ const { check, validationResult } = require('express-validator');
 
 router.get('/searchMedicines', (req, res, next) => authenticateToken('doctor', req, res, next), searchMedicines);
 router.get('/getPharmacy', (req, res, next) => authenticateToken('doctor', req, res, next), getAllPharmacy);
-router.get('/getOrders', getOrders); //(req, res, next) => authenticateToken(req.query.type, req, res, next),
+router.get('/getOrders', (req, res, next) => authenticateToken(req.query.type, req, res, next), getOrders);
 
 router.post(
     '/createNewOrder',
