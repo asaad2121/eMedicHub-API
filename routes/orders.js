@@ -1,11 +1,12 @@
 const express = require('express');
 const router = express.Router();
-const { searchMedicines, createNewOrder, getAllPharmacy } = require('../controllers/orders');
+const { searchMedicines, createNewOrder, getAllPharmacy, getOrders } = require('../controllers/orders');
 const { authenticateToken } = require('../middleware/session-authentication-middleware');
 const { check, validationResult } = require('express-validator');
 
 router.get('/searchMedicines', (req, res, next) => authenticateToken('doctor', req, res, next), searchMedicines);
 router.get('/getPharmacy', (req, res, next) => authenticateToken('doctor', req, res, next), getAllPharmacy);
+router.get('/getOrders', getOrders); //(req, res, next) => authenticateToken(req.query.type, req, res, next),
 
 router.post(
     '/createNewOrder',
