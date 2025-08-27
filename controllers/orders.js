@@ -1,5 +1,6 @@
 const { DynamoDBClient, ScanCommand, PutItemCommand, BatchGetItemCommand } = require('@aws-sdk/client-dynamodb');
 const { getNextId } = require('./utils/functions');
+const { OrderStatus } = require('./utils/constants');
 
 const client = new DynamoDBClient({ region: process.env.AWS_REGION });
 
@@ -14,6 +15,7 @@ const searchMedicines = async (req, res) => {
     }
 
     try {
+        const capitalizedName = name?.charAt(0)?.toUpperCase() + name?.slice(1);
         const command = new ScanCommand({
             TableName: 'Medicines',
             FilterExpression: 'contains(#nm, :name)',
@@ -21,7 +23,7 @@ const searchMedicines = async (req, res) => {
                 '#nm': 'name',
             },
             ExpressionAttributeValues: {
-                ':name': { S: name },
+                ':name': { S: capitalizedName },
             },
         });
 
@@ -64,7 +66,7 @@ const createNewOrder = async (req, res) => {
                 med_id: { S: med.med_id },
                 quantity: { N: String(med.quantity) },
                 price: { N: String(med.price) },
-                status: { S: 'placed' },
+                status: { S: OrderStatus.CREATED },
                 timings: {
                     M: {
                         before_morning_med: { BOOL: med.timings?.before_morning_med || false },
@@ -141,7 +143,7 @@ const getOrders = async (req, res) => {
             Limit: parseInt(limit),
             FilterExpression: filterExpression || undefined,
             ExpressionAttributeValues:
-                Object.keys(expressionAttributeValues).length > 0 ? expressionAttributeValues : undefined,
+                Object.keys(expressionAttributeValues)?.length > 0 ? expressionAttributeValues : undefined,
         });
 
         const scanResult = await client.send(scanCommand);

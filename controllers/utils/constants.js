@@ -4,6 +4,12 @@ const IdTypes = Object.freeze({
     NATIONAL_ID: 'National ID',
 });
 
+const OrderStatus = Object.freeze({
+    CREATED: 'Created',
+    READY: 'Ready',
+    COLLECTED: 'Collected',
+});
+
 const BloodGroups = Object.freeze({
     A_POS: 'A+',
     A_NEG: 'A-',
@@ -15,4 +21,4 @@ const BloodGroups = Object.freeze({
     AB_NEG: 'AB-',
 });
 
-module.exports = { IdTypes, BloodGroups };
+module.exports = { IdTypes, BloodGroups, OrderStatus };
