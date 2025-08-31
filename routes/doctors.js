@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { loginDoctors, addNewPatientPost, addNewPatientGet } = require('../controllers/doctors');
+const { loginDoctors, addNewPatientPost, addNewPatientGet, viewPatients } = require('../controllers/doctors');
 const { check, validationResult } = require('express-validator');
 const { authenticateToken } = require('../middleware/session-authentication-middleware');
 const { viewAppointments } = require('../controllers/patients');
@@ -36,6 +36,7 @@ router.get('/logout', (req, res) => {
 
 router.get('/addNewPatient', (req, res, next) => authenticateToken('doctor', req, res, next), addNewPatientGet);
 router.get('/viewAppointments', (req, res, next) => authenticateToken('doctor', req, res, next), viewAppointments);
+router.get('/viewPatients', (req, res, next) => authenticateToken('doctor', req, res, next), viewPatients);
 
 router.post(
     '/addNewPatient',
