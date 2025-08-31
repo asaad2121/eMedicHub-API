@@ -1,4 +1,10 @@
-const { QueryCommand, DynamoDBClient, PutItemCommand } = require('@aws-sdk/client-dynamodb');
+const {
+    QueryCommand,
+    DynamoDBClient,
+    PutItemCommand,
+    ScanCommand,
+    GetItemCommand,
+} = require('@aws-sdk/client-dynamodb');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { getAvailableSlots, fetchDoctorAppointments, parseTime } = require('./utils/appointments');
@@ -22,6 +28,26 @@ const checkDoctorAvailability = async (req, res) => {
 const createNewAppointment = async (req, res) => {
     try {
         const { doctor_id, patient_id, date, start_time } = req.body;
+
+        const tablesToCheck = [
+            { table: 'Patients', id: patient_id, label: 'Patient' },
+            { table: 'Doctors', id: doctor_id, label: 'Doctor' },
+        ];
+
+        for (const { table, id, label } of tablesToCheck) {
+            const checkCmd = new GetItemCommand({
+                TableName: table,
+                Key: { id: { S: id } },
+            });
+
+            const result = await client.send(checkCmd);
+            if (!result.Item) {
+                return res.status(400).json({
+                    success: false,
+                    message: `${label} with id '${id}' does not exist`,
+                });
+            }
+        }
         const { workingHours, appointments } = await fetchDoctorAppointments(doctor_id, date);
 
         const slotStart = parseTime(start_time);
@@ -109,8 +135,78 @@ const loginPatients = async (req, res) => {
     }
 };
 
+const viewAppointments = async (req, res) => {
+    try {
+        const { type, doctor_id, patient_id, start_date, end_date, limit = 10, currentPageNo = 1 } = req.query;
+        const pageSize = parseInt(limit);
+        const pageNo = parseInt(currentPageNo);
+
+        if (type === 'doctor' && !doctor_id)
+            return res.status(400).json({ success: false, message: 'doctor_id is required for type=doctor' });
+        if (type === 'patient' && !patient_id)
+            return res.status(400).json({ success: false, message: 'patient_id is required for type=patient' });
+
+        let filterExpression = '';
+        const expressionAttributeValues = {};
+
+        if (type === 'doctor') {
+            filterExpression += 'doctor_id = :docId';
+            expressionAttributeValues[':docId'] = { S: doctor_id };
+        } else if (type === 'patient') {
+            filterExpression += 'patient_id = :patId';
+            expressionAttributeValues[':patId'] = { S: patient_id };
+        }
+
+        const todayStr = new Date()?.toISOString()?.split('T')[0];
+
+        if (start_date && end_date) {
+            filterExpression += ' AND #date BETWEEN :start AND :end';
+            expressionAttributeValues[':start'] = { S: start_date };
+            expressionAttributeValues[':end'] = { S: end_date };
+        } else {
+            filterExpression += ' AND #date >= :today';
+            expressionAttributeValues[':today'] = { S: todayStr };
+        }
+
+        let appointments = [];
+        let lastEvaluatedKey = null;
+        const itemsNeeded = pageNo * pageSize;
+
+        while (appointments?.length < itemsNeeded) {
+            const scanCommand = new ScanCommand({
+                TableName: 'Appointments',
+                FilterExpression: filterExpression,
+                ExpressionAttributeValues: expressionAttributeValues,
+                ExpressionAttributeNames: { '#date': 'date' },
+                ExclusiveStartKey: lastEvaluatedKey,
+            });
+
+            const scanResult = await client.send(scanCommand);
+            appointments.push(...(scanResult.Items || []));
+            lastEvaluatedKey = scanResult.LastEvaluatedKey;
+
+            if (!lastEvaluatedKey) break;
+        }
+
+        const startIndex = (pageNo - 1) * pageSize;
+        const paginatedAppointments = appointments?.slice(startIndex, startIndex + pageSize);
+
+        return res.status(200).json({
+            success: true,
+            currentPageNo: pageNo,
+            limit: pageSize,
+            totalAppointments: appointments.length,
+            data: paginatedAppointments,
+        });
+    } catch (err) {
+        console.error('Error fetching appointments:', err);
+        return res.status(500).json({ success: false, message: 'Internal server error', error: err.message });
+    }
+};
+
 module.exports = {
     loginPatients,
     checkDoctorAvailability,
     createNewAppointment,
+    viewAppointments,
 };
