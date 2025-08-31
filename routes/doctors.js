@@ -53,6 +53,7 @@ router.post(
         check('password', 'Password must contain a digit').matches(/\d/),
         check('blood_grp', 'Blood group is required').notEmpty(),
         check('phone_no', 'Phone number is required').notEmpty(),
+        check('phone_no', 'Phone number must be exactly 10 digits eg 0221231234').matches(/^\d{10}$/),
         check('gp_id', 'GP ID is required').notEmpty(),
         check('id_type', 'Identification Type is required').notEmpty(),
         check('id_number', 'Identification Number is required').notEmpty(),
