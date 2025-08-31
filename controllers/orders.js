@@ -1,4 +1,10 @@
-const { DynamoDBClient, ScanCommand, PutItemCommand, BatchGetItemCommand } = require('@aws-sdk/client-dynamodb');
+const {
+    DynamoDBClient,
+    ScanCommand,
+    PutItemCommand,
+    BatchGetItemCommand,
+    GetItemCommand,
+} = require('@aws-sdk/client-dynamodb');
 const { getNextId } = require('./utils/functions');
 const { OrderStatus } = require('./utils/constants');
 
@@ -49,6 +55,27 @@ const createNewOrder = async (req, res) => {
     const { appointment_id, patient_id, doctor_id, pharma_id, medicines } = req.body;
 
     try {
+        const tablesToCheck = [
+            { table: 'Patients', id: patient_id, label: 'Patient' },
+            { table: 'Doctors', id: doctor_id, label: 'Doctor' },
+            { table: 'Pharmacy', id: pharma_id, label: 'Pharmacy' },
+        ];
+
+        for (const { table, id, label } of tablesToCheck) {
+            const checkCmd = new GetItemCommand({
+                TableName: table,
+                Key: { id: { S: id } },
+            });
+
+            const result = await client.send(checkCmd);
+            if (!result.Item) {
+                return res.status(400).json({
+                    success: false,
+                    message: `${label} with id '${id}' does not exist`,
+                });
+            }
+        }
+
         const createdOrders = [];
         const currentTime = new Date().toISOString();
 
@@ -101,25 +128,37 @@ const createNewOrder = async (req, res) => {
 
 const getOrders = async (req, res) => {
     try {
-        const { limit = 10, currentPageNo = 1, doctor_id, patient_id, pharma_id, type } = req.query;
+        const { limit = 10, currentPageNo = 1, doctor_id, patient_id, pharma_id, type, patientSearch } = req.query;
+        const pageSize = parseInt(limit);
+        const pageNo = parseInt(currentPageNo);
 
-        if (type === 'doctor' && !doctor_id) {
-            return res.status(400).json({
-                success: false,
-                message: 'doctor_id is required for type=doctor',
+        if (type === 'doctor' && !doctor_id)
+            return res.status(400).json({ success: false, message: 'doctor_id is required for type=doctor' });
+        if (type === 'patient' && !patient_id)
+            return res.status(400).json({ success: false, message: 'patient_id is required for type=patient' });
+        if (type === 'pharma' && !pharma_id)
+            return res.status(400).json({ success: false, message: 'pharma_id is required for type=pharma' });
+
+        let patientIdsFromSearch = [];
+        if (patientSearch && patientSearch.length >= 3) {
+            const patientScan = new ScanCommand({
+                TableName: 'Patients',
+                FilterExpression: 'contains(#fn, :search) OR contains(#ln, :search)',
+                ExpressionAttributeNames: { '#fn': 'first_name', '#ln': 'last_name' },
+                ExpressionAttributeValues: { ':search': { S: patientSearch } },
             });
-        }
-        if (type === 'patient' && !patient_id) {
-            return res.status(400).json({
-                success: false,
-                message: 'patient_id is required for type=patient',
-            });
-        }
-        if (type === 'pharma' && !pharma_id) {
-            return res.status(400).json({
-                success: false,
-                message: 'pharma_id is required for type=pharma',
-            });
+            const patientResult = await client.send(patientScan);
+            patientIdsFromSearch = patientResult.Items?.map((p) => p.id.S) || [];
+            if (patientIdsFromSearch.length === 0) {
+                return res.status(200).json({
+                    success: true,
+                    currentPageNo: pageNo,
+                    limit: pageSize,
+                    totalOrders: 0,
+                    data: [],
+                    message: 'No orders found for given patient name',
+                });
+            }
         }
 
         let filterExpression = '';
@@ -137,29 +176,45 @@ const getOrders = async (req, res) => {
             filterExpression += (filterExpression ? ' AND ' : '') + 'pharma_id = :phId';
             expressionAttributeValues[':phId'] = { S: pharma_id };
         }
+        if (patientIdsFromSearch?.length > 0) {
+            const patientFilters = patientIdsFromSearch.map((_, i) => `patient_id = :p${i}`).join(' OR ');
+            filterExpression += (filterExpression ? ' AND ' : '') + `(${patientFilters})`;
+            patientIdsFromSearch.forEach((id, i) => {
+                expressionAttributeValues[`:p${i}`] = { S: id };
+            });
+        }
 
-        const scanCommand = new ScanCommand({
-            TableName: 'Orders',
-            Limit: parseInt(limit),
-            FilterExpression: filterExpression || undefined,
-            ExpressionAttributeValues:
-                Object.keys(expressionAttributeValues)?.length > 0 ? expressionAttributeValues : undefined,
-        });
+        let orders = [];
+        let lastEvaluatedKey = null;
+        const itemsNeeded = pageNo * pageSize;
 
-        const scanResult = await client.send(scanCommand);
-        const orders = scanResult.Items || [];
+        while (orders?.length < itemsNeeded) {
+            const scanCommand = new ScanCommand({
+                TableName: 'Orders',
+                FilterExpression: filterExpression || undefined,
+                ExpressionAttributeValues:
+                    Object.keys(expressionAttributeValues).length > 0 ? expressionAttributeValues : undefined,
+                ExclusiveStartKey: lastEvaluatedKey,
+            });
 
-        const patientIds = [...new Set(orders?.map((o) => o?.patient_id?.S))];
-        const doctorIds = [...new Set(orders?.map((o) => o?.doctor_id?.S))];
-        const pharmaIds = [...new Set(orders?.map((o) => o?.pharma_id?.S))];
+            const scanResult = await client.send(scanCommand);
+            orders?.push(...(scanResult.Items || []));
+            lastEvaluatedKey = scanResult.LastEvaluatedKey;
+
+            if (!lastEvaluatedKey) break;
+        }
+
+        const startIndex = (pageNo - 1) * pageSize;
+        const paginatedOrders = orders?.slice(startIndex, startIndex + pageSize);
+
+        const patientIds = [...new Set(paginatedOrders.map((o) => o?.patient_id?.S))];
+        const doctorIds = [...new Set(paginatedOrders.map((o) => o?.doctor_id?.S))];
+        const pharmaIds = [...new Set(paginatedOrders.map((o) => o?.pharma_id?.S))];
 
         const requestItems = {};
-
         if (patientIds?.length > 0) requestItems.Patients = { Keys: patientIds?.map((id) => ({ id: { S: id } })) };
-
         if (doctorIds?.length > 0) requestItems.Doctors = { Keys: doctorIds?.map((id) => ({ id: { S: id } })) };
-
-        if (pharmaIds?.length > 0) requestItems.Pharmacies = { Keys: pharmaIds?.map((id) => ({ id: { S: id } })) };
+        if (pharmaIds?.length > 0) requestItems.Pharmacy = { Keys: pharmaIds?.map((id) => ({ id: { S: id } })) };
 
         let batchResult = { Responses: {} };
         if (Object.keys(requestItems)?.length > 0) {
@@ -167,13 +222,23 @@ const getOrders = async (req, res) => {
             batchResult = await client.send(batchGetCommand);
         }
 
-        const patientMap = Object.fromEntries((batchResult.Responses?.Patients || [])?.map((p) => [p.id.S, p.name.S]));
-        const doctorMap = Object.fromEntries((batchResult.Responses?.Doctors || [])?.map((d) => [d.id.S, d.name.S]));
+        const patientMap = Object.fromEntries(
+            (batchResult.Responses?.Patients || [])?.map((p) => [
+                p.id?.S,
+                `${p.first_name?.S || ''} ${p.last_name?.S || ''}`.trim(),
+            ])
+        );
+        const doctorMap = Object.fromEntries(
+            (batchResult.Responses?.Doctors || []).map((d) => [
+                d.id?.S,
+                `${d.first_name?.S || ''} ${d.last_name?.S || ''}`.trim(),
+            ])
+        );
         const pharmaMap = Object.fromEntries(
-            (batchResult.Responses?.Pharmacies || [])?.map((ph) => [ph.id.S, ph.name.S])
+            (batchResult.Responses?.Pharmacy || []).map((ph) => [ph.id?.S, ph.name?.S])
         );
 
-        const enrichedOrders = orders?.map((o) => ({
+        const enrichedOrders = paginatedOrders?.map((o) => ({
             ...o,
             patient_name: patientMap[o.patient_id.S],
             doctor_name: doctorMap[o.doctor_id.S],
@@ -182,9 +247,9 @@ const getOrders = async (req, res) => {
 
         res.status(200).json({
             success: true,
-            currentPageNo: parseInt(currentPageNo),
-            limit: parseInt(limit),
-            totalOrders: enrichedOrders?.length,
+            currentPageNo: pageNo,
+            limit: pageSize,
+            totalOrders: orders?.length,
             data: enrichedOrders,
         });
     } catch (err) {

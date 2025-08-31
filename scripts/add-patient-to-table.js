@@ -23,7 +23,7 @@ const addPatient = async () => {
         password: { S: hashedPassword },
         blood_grp: { S: 'O+' },
         address: { S: '123 Main Street, Wellington' },
-        phone_no: { S: '+64-21-123-4567' },
+        phone_no: { S: '0211234567' },
         gp_id: { S: 'DOC-001' },
         id_type: { S: 'Passport' },
         id_number: { S: 'NZ1234567' },
