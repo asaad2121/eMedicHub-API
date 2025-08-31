@@ -1,6 +1,7 @@
 const jwt = require('jsonwebtoken');
 const { DynamoDBClient, QueryCommand, ScanCommand, PutItemCommand } = require('@aws-sdk/client-dynamodb');
-const { IdTypes, BloodGroups } = require('./utils/constants');
+const { IdTypes, BloodGroups, AgeRanges } = require('./utils/constants');
+const { differenceInYears, parseISO } = require('date-fns');
 const { verifyPassword, generateHashedPassword, getNextId } = require('./utils/functions');
 
 const client = new DynamoDBClient({ region: process.env.AWS_REGION });
@@ -60,7 +61,6 @@ const loginDoctors = async (req, res) => {
 
         res.cookie('jwt_doctor', token, {
             httpOnly: true,
-            maxAge: 1800000, // 30 minutes
             secure: process.env.ENVIRONMENT === 'prod',
             sameSite: 'Lax',
         });
@@ -177,9 +177,153 @@ const addNewPatientPost = async (req, res) => {
     }
 };
 
+const viewPatients = async (req, res) => {
+    try {
+        const {
+            searchPatient,
+            ageRange,
+            bloodGrp,
+            lastAppointmentStart,
+            lastAppointmentEnd,
+            limit = 10,
+            currentPageNo = 1,
+            doctor_id,
+            type,
+        } = req.query;
+
+        if (type === 'doctor' && !doctor_id)
+            return res.status(400).json({ success: false, message: 'doctor_id is required for type=doctor' });
+
+        const pageSize = parseInt(limit);
+        const pageNo = parseInt(currentPageNo);
+
+        let filterExpression = '';
+        const expressionAttributeValues = {};
+        const expressionAttributeNames = {};
+
+        if (searchPatient && searchPatient?.length >= 2) {
+            filterExpression += '(contains(#fn, :search) OR contains(#ln, :search))';
+            expressionAttributeValues[':search'] = { S: searchPatient };
+            expressionAttributeNames['#fn'] = 'first_name';
+            expressionAttributeNames['#ln'] = 'last_name';
+        }
+
+        const bgInput = bloodGrp?.trim().toUpperCase();
+        if (bgInput && Object.values(BloodGroups).includes(bgInput)) {
+            expressionAttributeNames['#bg'] = 'blood_grp';
+            filterExpression = filterExpression ? `${filterExpression} AND #bg = :bloodGrp` : '#bg = :bloodGrp';
+            expressionAttributeValues[':bloodGrp'] = { S: bgInput };
+        }
+
+        if (filterExpression) filterExpression += ' AND ';
+        filterExpression += 'gp_id = :gpId';
+        expressionAttributeValues[':gpId'] = { S: doctor_id };
+
+        let patients = [];
+        let lastEvaluatedKey = null;
+        const itemsNeeded = pageNo * pageSize;
+
+        while (patients?.length < itemsNeeded) {
+            const scanCommand = new ScanCommand({
+                TableName: 'Patients',
+                FilterExpression: filterExpression || undefined,
+                ExpressionAttributeValues: Object.keys(expressionAttributeValues)?.length
+                    ? expressionAttributeValues
+                    : undefined,
+                ExpressionAttributeNames: Object.keys(expressionAttributeNames)?.length
+                    ? expressionAttributeNames
+                    : undefined,
+                ExclusiveStartKey: lastEvaluatedKey,
+            });
+
+            const scanResult = await client.send(scanCommand);
+            patients.push(...(scanResult.Items || []));
+            lastEvaluatedKey = scanResult.LastEvaluatedKey;
+            if (!lastEvaluatedKey) break;
+        }
+
+        let mappedPatients = patients.map((p) => {
+            const dob = p.dob?.S;
+            const age = dob ? differenceInYears(new Date(), parseISO(dob)) : null;
+            return {
+                id: p.id.S,
+                first_name: p.first_name.S,
+                last_name: p.last_name.S,
+                dob,
+                age,
+                blood_grp: p.blood_grp?.S?.trim().toUpperCase() || null,
+                email: p.email?.S,
+                phone_no: p.phone_no?.S,
+            };
+        });
+
+        if (ageRange && AgeRanges[ageRange]) {
+            const [minAge, maxAge] = AgeRanges[ageRange];
+            mappedPatients = mappedPatients.filter((p) => p.age !== null && p.age >= minAge && p.age <= maxAge);
+        }
+
+        if (lastAppointmentStart || lastAppointmentEnd) {
+            const start = lastAppointmentStart ? parseISO(lastAppointmentStart) : new Date('1900-01-01');
+            const end = lastAppointmentEnd ? parseISO(lastAppointmentEnd) : new Date();
+
+            const patientIds = mappedPatients.map((p) => p.id);
+
+            if (patientIds?.length > 0) {
+                const appointmentsFilterParts = [];
+                const appointmentsExpressionValues = {
+                    ':start': { S: start.toISOString().split('T')[0] },
+                    ':end': { S: end.toISOString().split('T')[0] },
+                };
+                const appointmentsExpressionNames = { '#patient_id': 'patient_id', '#date': 'date' };
+
+                patientIds.forEach((id, i) => {
+                    const key = `:p${i}`;
+                    appointmentsExpressionValues[key] = { S: id };
+                    appointmentsFilterParts.push(`#patient_id = ${key}`);
+                });
+
+                const appointmentsFilter = `(${appointmentsFilterParts.join(' OR ')}) AND #date BETWEEN :start AND :end`;
+
+                const appointmentsCommand = new ScanCommand({
+                    TableName: 'Appointments',
+                    FilterExpression: appointmentsFilter,
+                    ExpressionAttributeValues: appointmentsExpressionValues,
+                    ExpressionAttributeNames: appointmentsExpressionNames,
+                });
+
+                const appointmentsResult = await client.send(appointmentsCommand);
+                const patientIdsWithAppointments = new Set(appointmentsResult.Items?.map((a) => a.patient_id.S));
+
+                mappedPatients = mappedPatients.filter((p) => patientIdsWithAppointments.has(p.id));
+            } else {
+                mappedPatients = [];
+            }
+        }
+
+        if (!searchPatient && !ageRange && !bloodGrp && !lastAppointmentStart && !lastAppointmentEnd) {
+            mappedPatients.sort((a, b) => b.id.localeCompare(a.id));
+        }
+
+        const startIndex = (pageNo - 1) * pageSize;
+        const paginatedPatients = mappedPatients.slice(startIndex, startIndex + pageSize);
+
+        return res.status(200).json({
+            success: true,
+            currentPageNo: pageNo,
+            limit: pageSize,
+            totalPatients: mappedPatients?.length,
+            data: paginatedPatients,
+        });
+    } catch (err) {
+        console.error('Error fetching patients:', err);
+        return res.status(500).json({ success: false, message: 'Internal server error', error: err.message });
+    }
+};
+
 module.exports = {
     loginDoctors,
     getAllDoctors,
     addNewPatientPost,
     addNewPatientGet,
+    viewPatients,
 };

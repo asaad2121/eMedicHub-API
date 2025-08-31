@@ -21,4 +21,12 @@ const BloodGroups = Object.freeze({
     AB_NEG: 'AB-',
 });
 
-module.exports = { IdTypes, BloodGroups, OrderStatus };
+const AgeRanges = Object.freeze({
+    '0-9': [0, 9],
+    '10-17': [10, 17],
+    '18-30': [18, 30],
+    '31-50': [31, 50],
+    '51+': [51, 200],
+});
+
+module.exports = { IdTypes, BloodGroups, OrderStatus, AgeRanges };
