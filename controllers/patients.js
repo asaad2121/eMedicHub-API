@@ -195,10 +195,10 @@ const viewAppointments = async (req, res) => {
 
         const requestItems = {};
         if (patientIds?.length > 0) {
-            requestItems?.Patients = { Keys: patientIds.map((id) => ({ id: { S: id } })) };
+            requestItems.Patients = { Keys: patientIds.map((id) => ({ id: { S: id } })) };
         }
         if (doctorIds?.length > 0) {
-            requestItems?.Doctors = { Keys: doctorIds.map((id) => ({ id: { S: id } })) };
+            requestItems.Doctors = { Keys: doctorIds.map((id) => ({ id: { S: id } })) };
         }
 
         let batchResult = { Responses: {} };
@@ -234,10 +234,10 @@ const viewAppointments = async (req, res) => {
             };
 
             if (type === 'patient') {
-                appointment?.doctor_name = doctorMap[a.doctor_id.S] || a.doctor_id.S;
-                appointment?.speciality = doctorSpecialityMap[a.doctor_id.S] || '';
+                appointment.doctor_name = doctorMap[a.doctor_id.S] || a.doctor_id.S;
+                appointment.speciality = doctorSpecialityMap[a.doctor_id.S] || '';
             } else if (type === 'doctor') {
-                appointment?.patient_name = patientMap[a.patient_id.S] || a.patient_id.S;
+                appointment.patient_name = patientMap[a.patient_id.S] || a.patient_id.S;
             }
 
             return appointment;
