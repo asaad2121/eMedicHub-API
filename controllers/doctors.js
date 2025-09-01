@@ -1,5 +1,5 @@
 const jwt = require('jsonwebtoken');
-const { DynamoDBClient, QueryCommand, ScanCommand, PutItemCommand } = require('@aws-sdk/client-dynamodb');
+const { DynamoDBClient, QueryCommand, ScanCommand, PutItemCommand, GetItemCommand } = require('@aws-sdk/client-dynamodb');
 const { IdTypes, BloodGroups, AgeRanges } = require('./utils/constants');
 const { differenceInYears, parseISO } = require('date-fns');
 const { verifyPassword, generateHashedPassword, getNextId } = require('./utils/functions');
@@ -188,11 +188,10 @@ const viewPatients = async (req, res) => {
             limit = 10,
             currentPageNo = 1,
             doctor_id,
-            type,
         } = req.query;
 
-        if (type === 'doctor' && !doctor_id)
-            return res.status(400).json({ success: false, message: 'doctor_id is required for type=doctor' });
+        if (!doctor_id)
+            return res.status(400).json({ success: false, message: 'doctor_id is required' });
 
         const pageSize = parseInt(limit);
         const pageNo = parseInt(currentPageNo);
@@ -254,8 +253,30 @@ const viewPatients = async (req, res) => {
                 blood_grp: p.blood_grp?.S?.trim().toUpperCase() || null,
                 email: p.email?.S,
                 phone_no: p.phone_no?.S,
+                address: p.address?.S || '',
+                gp_id: p.last_gp_visited?.S || p.gp_id?.S || null,
             };
         });
+
+        const uniqueGpIds = [...new Set(mappedPatients.map((p) => p.gp_id).filter(Boolean))];
+        let gpMap = {};
+        if (uniqueGpIds?.length > 0) {
+            for (const gpId of uniqueGpIds) {
+                const docCmd = new GetItemCommand({
+                    TableName: 'Doctors',
+                    Key: { id: { S: gpId } },
+                });
+                const docResult = await client.send(docCmd);
+                if (docResult.Item) {
+                    gpMap[gpId] = `${docResult.Item.first_name?.S || ''} ${docResult.Item.last_name?.S || ''}`.trim();
+                }
+            }
+        }
+
+        mappedPatients = mappedPatients.map((p) => ({
+            ...p,
+            gp_name: p.gp_id ? gpMap[p.gp_id] || null : null,
+        }));
 
         if (ageRange && AgeRanges[ageRange]) {
             const [minAge, maxAge] = AgeRanges[ageRange];

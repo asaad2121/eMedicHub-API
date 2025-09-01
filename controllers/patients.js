@@ -29,7 +29,7 @@ const checkDoctorAvailability = async (req, res) => {
 
 const createNewAppointment = async (req, res) => {
     try {
-        const { doctor_id, patient_id, date, start_time } = req.body;
+        const { doctor_id, patient_id, date, start_time, note } = req.body;
 
         const tablesToCheck = [
             { table: 'Patients', id: patient_id, label: 'Patient' },
@@ -71,6 +71,7 @@ const createNewAppointment = async (req, res) => {
                 patient_id: { S: patient_id },
                 date: { S: date },
                 start_time: { S: start_time },
+                note: { S: note },
                 end_time: {
                     S: `${String(Math.floor(slotEnd / 60)).padStart(2, '0')}:${String(slotEnd % 60).padStart(2, '0')}`,
                 },
