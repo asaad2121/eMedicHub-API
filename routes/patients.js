@@ -5,6 +5,7 @@ const {
     checkDoctorAvailability,
     createNewAppointment,
     viewAppointments,
+    viewAppointmentData,
 } = require('../controllers/patients');
 const { check, validationResult } = require('express-validator');
 const { authenticateToken } = require('../middleware/session-authentication-middleware');
@@ -12,6 +13,11 @@ const { getAllDoctors } = require('../controllers/doctors');
 
 router.get('/getDoctors', (req, res, next) => authenticateToken('patient', req, res, next), getAllDoctors);
 router.get('/viewAppointments', (req, res, next) => authenticateToken('patient', req, res, next), viewAppointments);
+router.get(
+    '/viewAppointmentData',
+    (req, res, next) => authenticateToken('patient', req, res, next),
+    viewAppointmentData
+);
 
 router.get(
     '/checkDoctorAvailability',
