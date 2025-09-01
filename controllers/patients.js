@@ -4,11 +4,13 @@ const {
     PutItemCommand,
     ScanCommand,
     GetItemCommand,
+    BatchGetItemCommand,
 } = require('@aws-sdk/client-dynamodb');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { getAvailableSlots, fetchDoctorAppointments, parseTime } = require('./utils/appointments');
 const { getNextId } = require('./utils/functions');
+const { differenceInYears, parseISO } = require('date-fns');
 require('dotenv').config({ quiet: true });
 
 const client = new DynamoDBClient({ region: process.env.AWS_REGION });
@@ -150,14 +152,14 @@ const viewAppointments = async (req, res) => {
         const expressionAttributeValues = {};
 
         if (type === 'doctor') {
-            filterExpression += 'doctor_id = :docId';
+            filterExpression = 'doctor_id = :docId';
             expressionAttributeValues[':docId'] = { S: doctor_id };
         } else if (type === 'patient') {
-            filterExpression += 'patient_id = :patId';
+            filterExpression = 'patient_id = :patId';
             expressionAttributeValues[':patId'] = { S: patient_id };
         }
 
-        const todayStr = new Date()?.toISOString()?.split('T')[0];
+        const todayStr = new Date().toISOString()?.split('T')[0];
 
         if (start_date && end_date) {
             filterExpression += ' AND #date BETWEEN :start AND :end';
@@ -188,14 +190,67 @@ const viewAppointments = async (req, res) => {
             if (!lastEvaluatedKey) break;
         }
 
+        const patientIds = [...new Set(appointments.map((a) => a.patient_id?.S))];
+        const doctorIds = [...new Set(appointments.map((a) => a.doctor_id?.S))];
+
+        const requestItems = {};
+        if (patientIds?.length > 0) {
+            requestItems?.Patients = { Keys: patientIds.map((id) => ({ id: { S: id } })) };
+        }
+        if (doctorIds?.length > 0) {
+            requestItems?.Doctors = { Keys: doctorIds.map((id) => ({ id: { S: id } })) };
+        }
+
+        let batchResult = { Responses: {} };
+        if (Object.keys(requestItems)?.length > 0) {
+            const batchGetCommand = new BatchGetItemCommand({ RequestItems: requestItems });
+            batchResult = await client.send(batchGetCommand);
+        }
+
+        const patientMap = Object.fromEntries(
+            (batchResult.Responses?.Patients || []).map((p) => [
+                p.id.S,
+                `${p.first_name?.S || ''} ${p.last_name?.S || ''}`.trim(),
+            ])
+        );
+
+        const doctorMap = Object.fromEntries(
+            (batchResult.Responses?.Doctors || []).map((d) => [
+                d.id.S,
+                `${d.first_name?.S || ''} ${d.last_name?.S || ''}`.trim(),
+            ])
+        );
+
+        const doctorSpecialityMap = Object.fromEntries(
+            (batchResult.Responses?.Doctors || []).map((d) => [d.id.S, d.speciality?.S || ''])
+        );
+
+        const mappedAppointments = appointments.map((a) => {
+            const appointment = {
+                id: a.id.S,
+                date: a.date.S,
+                start_time: a.start_time.S,
+                end_time: a.end_time.S,
+            };
+
+            if (type === 'patient') {
+                appointment?.doctor_name = doctorMap[a.doctor_id.S] || a.doctor_id.S;
+                appointment?.speciality = doctorSpecialityMap[a.doctor_id.S] || '';
+            } else if (type === 'doctor') {
+                appointment?.patient_name = patientMap[a.patient_id.S] || a.patient_id.S;
+            }
+
+            return appointment;
+        });
+
         const startIndex = (pageNo - 1) * pageSize;
-        const paginatedAppointments = appointments?.slice(startIndex, startIndex + pageSize);
+        const paginatedAppointments = mappedAppointments?.slice(startIndex, startIndex + pageSize);
 
         return res.status(200).json({
             success: true,
             currentPageNo: pageNo,
             limit: pageSize,
-            totalAppointments: appointments.length,
+            totalAppointments: mappedAppointments?.length,
             data: paginatedAppointments,
         });
     } catch (err) {
@@ -204,9 +259,82 @@ const viewAppointments = async (req, res) => {
     }
 };
 
+const viewAppointmentData = async (req, res) => {
+    try {
+        const { appointment_id, type } = req.query;
+
+        if (!appointment_id) return res.status(400).json({ success: false, message: 'appointment_id is required' });
+        if (!['doctor', 'patient'].includes(type))
+            return res.status(400).json({ success: false, message: "type must be either 'doctor' or 'patient'" });
+
+        const appointmentCommand = new GetItemCommand({
+            TableName: 'Appointments',
+            Key: { id: { S: appointment_id } },
+        });
+        const appointmentResult = await client.send(appointmentCommand);
+        const appointment = appointmentResult.Item;
+
+        if (!appointment) return res.status(404).json({ success: false, message: 'Appointment not found' });
+
+        const doctorId = appointment?.doctor_id.S;
+        const patientId = appointment?.patient_id.S;
+
+        const doctorCommand = new GetItemCommand({
+            TableName: 'Doctors',
+            Key: { id: { S: doctorId } },
+        });
+        const doctorResult = await client.send(doctorCommand);
+        const doctor = doctorResult.Item;
+
+        const patientCommand = new GetItemCommand({
+            TableName: 'Patients',
+            Key: { id: { S: patientId } },
+        });
+        const patientResult = await client.send(patientCommand);
+        const patient = patientResult.Item;
+
+        const dob = patient?.dob?.S;
+        const age = dob ? differenceInYears(new Date(), parseISO(dob)) : null;
+
+        const responseData = {
+            appointment_id: appointment.id.S,
+            date: appointment.date.S,
+            start_time: appointment.start_time.S,
+            end_time: appointment.end_time?.S,
+            note: appointment.note?.S || '',
+
+            doctor: {
+                id: doctorId,
+                name: `${doctor?.first_name?.S || ''} ${doctor?.last_name?.S || ''}`.trim(),
+                speciality: doctor?.speciality?.S || '',
+            },
+
+            patient: {
+                id: patientId,
+                name: `${patient?.first_name?.S || ''} ${patient?.last_name?.S || ''}`.trim(),
+                age,
+                blood_grp: patient?.blood_grp?.S || '',
+                phone_no: patient?.phone_no?.S || '',
+                email: patient?.email?.S || '',
+                address: patient?.address?.S || '',
+            },
+        };
+
+        return res.status(200).json({ success: true, data: responseData });
+    } catch (err) {
+        console.error('Error fetching appointment data:', err);
+        return res.status(500).json({
+            success: false,
+            message: 'Internal server error',
+            error: err.message,
+        });
+    }
+};
+
 module.exports = {
     loginPatients,
     checkDoctorAvailability,
     createNewAppointment,
     viewAppointments,
+    viewAppointmentData,
 };

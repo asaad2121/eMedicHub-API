@@ -21,6 +21,7 @@ const addDoctor = async () => {
         dob: { S: '1985-06-15' },
         email: { S: 'alice@example.com' },
         password: { S: hashedPassword },
+        speciality: { S: 'General Practitioner' },
         visiting_hours: {
             M: {
                 monday: { M: { start: { S: '09:00' }, end: { S: '17:00' } } },
