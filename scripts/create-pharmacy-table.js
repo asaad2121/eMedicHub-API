@@ -9,12 +9,18 @@ const params = {
     AttributeDefinitions: [
         { AttributeName: 'id', AttributeType: 'S' },
         { AttributeName: 'name', AttributeType: 'S' },
+        { AttributeName: 'email', AttributeType: 'S' },
     ],
     KeySchema: [{ AttributeName: 'id', KeyType: 'HASH' }],
     GlobalSecondaryIndexes: [
         {
             IndexName: 'name-index',
             KeySchema: [{ AttributeName: 'name', KeyType: 'HASH' }],
+            Projection: { ProjectionType: 'ALL' },
+        },
+        {
+            IndexName: 'email-index',
+            KeySchema: [{ AttributeName: 'email', KeyType: 'HASH' }],
             Projection: { ProjectionType: 'ALL' },
         },
     ],

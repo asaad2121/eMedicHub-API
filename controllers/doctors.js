@@ -1,5 +1,11 @@
 const jwt = require('jsonwebtoken');
-const { DynamoDBClient, QueryCommand, ScanCommand, PutItemCommand, GetItemCommand } = require('@aws-sdk/client-dynamodb');
+const {
+    DynamoDBClient,
+    QueryCommand,
+    ScanCommand,
+    PutItemCommand,
+    GetItemCommand,
+} = require('@aws-sdk/client-dynamodb');
 const { IdTypes, BloodGroups, AgeRanges } = require('./utils/constants');
 const { differenceInYears, parseISO } = require('date-fns');
 const { verifyPassword, generateHashedPassword, getNextId } = require('./utils/functions');
@@ -190,8 +196,7 @@ const viewPatients = async (req, res) => {
             doctor_id,
         } = req.query;
 
-        if (!doctor_id)
-            return res.status(400).json({ success: false, message: 'doctor_id is required' });
+        if (!doctor_id) return res.status(400).json({ success: false, message: 'doctor_id is required' });
 
         const pageSize = parseInt(limit);
         const pageNo = parseInt(currentPageNo);
@@ -202,7 +207,8 @@ const viewPatients = async (req, res) => {
 
         if (searchPatient && searchPatient?.length >= 2) {
             filterExpression += '(contains(#fn, :search) OR contains(#ln, :search))';
-            expressionAttributeValues[':search'] = { S: searchPatient };
+            const capitalizedSearch = searchPatient?.charAt(0)?.toUpperCase() + searchPatient?.slice(1);
+            expressionAttributeValues[':search'] = { S: capitalizedSearch };
             expressionAttributeNames['#fn'] = 'first_name';
             expressionAttributeNames['#ln'] = 'last_name';
         }

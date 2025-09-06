@@ -27,7 +27,7 @@ const addPatient = async () => {
         gp_id: { S: 'DOC-001' },
         id_type: { S: 'Passport' },
         id_number: { S: 'NZ1234567' },
-        last_gp_visited: { S: 'DOC-002' },
+        last_gp_visited: { S: 'DOC-001' },
     };
 
     const command = new PutItemCommand({
