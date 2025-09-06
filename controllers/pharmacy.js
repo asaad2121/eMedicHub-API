@@ -1,6 +1,7 @@
-const { QueryCommand, DynamoDBClient } = require('@aws-sdk/client-dynamodb');
+const { QueryCommand, DynamoDBClient, GetItemCommand, UpdateItemCommand } = require('@aws-sdk/client-dynamodb');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const { OrderStatus } = require('./utils/constants');
 require('dotenv').config({ quiet: true });
 
 const client = new DynamoDBClient({ region: process.env.AWS_REGION });
@@ -55,6 +56,62 @@ const loginPharma = async (req, res) => {
     }
 };
 
+const updateOrderStatus = async (req, res) => {
+    try {
+        const { order_id, status, pharma_id } = req.body;
+
+        const checkCmd = new GetItemCommand({
+            TableName: 'Pharmacy',
+            Key: { id: { S: pharma_id } },
+        });
+        const result = await client.send(checkCmd);
+
+        if (!result?.Item) {
+            return res.status(400).json({
+                success: false,
+                message: `Pharmacy with id '${pharma_id}' does not exist`,
+            });
+        }
+
+        if (!Object.values(OrderStatus)?.includes(status)) {
+            return res.status(400).json({
+                success: false,
+                message: `Invalid status '${status}'. Must be one of: ${Object.values(OrderStatus)?.join(', ')}`,
+            });
+        }
+
+        const updateCmd = new UpdateItemCommand({
+            TableName: 'Orders',
+            Key: { id: { S: order_id } },
+            UpdateExpression: 'SET #st = :status',
+            ExpressionAttributeNames: {
+                '#st': 'status',
+            },
+            ExpressionAttributeValues: {
+                ':status': { S: status },
+            },
+            ReturnValues: 'ALL_NEW',
+        });
+
+        
+        const updatedOrder = await client.send(updateCmd);
+        
+        const updatedValues = {
+            id: updatedOrder.Attributes.id.S,
+            status: updatedOrder.Attributes.status.S
+        }
+        return res.status(200).json({
+            success: true,
+            message: 'Order status updated successfully',
+            data: updatedValues,
+        });
+    } catch (err) {
+        console.error(err);
+        return res.status(500).json({ success: false, message: 'Internal server error' });
+    }
+};
+
 module.exports = {
     loginPharma,
+    updateOrderStatus
 };

@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { loginPharma } = require('../controllers/pharmacy.js');
+const { loginPharma, updateOrderStatus } = require('../controllers/pharmacy.js');
 const { check, validationResult } = require('express-validator');
 const { authenticateToken } = require('../middleware/session-authentication-middleware');
 // (req, res, next) => authenticateToken('pharma', req, res, next),
@@ -28,6 +28,9 @@ router.post(
     },
     loginPharma
 );
+
+
+router.post('/updateOrderStatus', updateOrderStatus)
 
 router.get('/logout', (req, res) => {
     res.clearCookie('jwt_pharma');

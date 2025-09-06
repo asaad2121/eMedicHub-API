@@ -140,12 +140,13 @@ const getOrders = async (req, res) => {
             return res.status(400).json({ success: false, message: 'pharma_id is required for type=pharma' });
 
         let patientIdsFromSearch = [];
-        if (patientSearch && patientSearch.length >= 3) {
+        if (patientSearch && patientSearch?.length >= 3) {
+            const capitalizedSearch = patientSearch?.charAt(0)?.toUpperCase() + patientSearch?.slice(1);
             const patientScan = new ScanCommand({
                 TableName: 'Patients',
                 FilterExpression: 'contains(#fn, :search) OR contains(#ln, :search)',
                 ExpressionAttributeNames: { '#fn': 'first_name', '#ln': 'last_name' },
-                ExpressionAttributeValues: { ':search': { S: patientSearch } },
+                ExpressionAttributeValues: { ':search': { S: capitalizedSearch } },
             });
             const patientResult = await client.send(patientScan);
             patientIdsFromSearch = patientResult.Items?.map((p) => p.id.S) || [];
