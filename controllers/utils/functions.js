@@ -83,6 +83,27 @@ const getAvailableSlots = (visitingHours, appointments, slotDuration = 30) => {
     return slots;
 };
 
+const mapDynamoDBOrders = (enrichedOrders) => {
+    return enrichedOrders?.map((o) => ({
+        id: o.id.S,
+        quantity: parseFloat(o.quantity.N),
+        appointment_id: o.appointment_id.S,
+        status: o.status.S,
+        doctor_id: o.doctor_id.S,
+        pharma_id: o.pharma_id.S,
+        patient_id: o.patient_id.S,
+        timings: Object.fromEntries(
+            Object.entries(o.timings.M).map(([key, value]) => [key, value.BOOL])
+        ),
+        time: o.time.S,
+        med_id: o.med_id.S,
+        price: parseFloat(o.price.N),
+        doctor_name: o.doctor_name,
+        patient_name: o.patient_name,
+        pharma_name: o.pharma_name,
+    }));
+};
+
 module.exports = {
     generateHashedPassword,
     verifyPassword,
@@ -91,4 +112,5 @@ module.exports = {
     formatTime,
     getDayOfWeek,
     getAvailableSlots,
+    mapDynamoDBOrders,
 };
