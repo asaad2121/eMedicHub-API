@@ -6,9 +6,10 @@ const {
     GetItemCommand,
 } = require('@aws-sdk/client-dynamodb');
 const { getNextId } = require('./utils/functions');
-const { OrderStatus } = require('./utils/constants');
 const { mapDynamoDBOrders } = require('./utils/functions');
-const { util } = require('prettier');
+const { OrderStatus } = require('./utils/constants');
+
+
 
 const client = new DynamoDBClient({ region: process.env.AWS_REGION });
 
