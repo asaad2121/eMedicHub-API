@@ -6,7 +6,10 @@ const {
     GetItemCommand,
 } = require('@aws-sdk/client-dynamodb');
 const { getNextId } = require('./utils/functions');
+const { mapDynamoDBOrders } = require('./utils/functions');
 const { OrderStatus } = require('./utils/constants');
+
+
 
 const client = new DynamoDBClient({ region: process.env.AWS_REGION });
 
@@ -246,12 +249,14 @@ const getOrders = async (req, res) => {
             pharma_name: pharmaMap[o.pharma_id.S],
         }));
 
+        const mappedOrders = mapDynamoDBOrders(enrichedOrders);
+
         res.status(200).json({
             success: true,
             currentPageNo: pageNo,
             limit: pageSize,
             totalOrders: orders?.length,
-            data: enrichedOrders,
+            data: mappedOrders,
         });
     } catch (err) {
         console.error('Error fetching orders:', err);
