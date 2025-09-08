@@ -41,7 +41,7 @@ const loginPharma = async (req, res) => {
             first_name: pharma.first_name?.S,
             last_name: pharma.last_name?.S,
             email: pharma.email.S,
-            type: 'Pharma',
+            type: 'pharma',
             token,
         };
 
