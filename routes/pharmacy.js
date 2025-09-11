@@ -29,8 +29,7 @@ router.post(
     loginPharma
 );
 
-
-router.post('/updateOrderStatus', (req, res, next) => authenticateToken('pharma', req, res, next), updateOrderStatus)
+router.post('/updateOrderStatus', (req, res, next) => authenticateToken('pharma', req, res, next), updateOrderStatus);
 
 router.get('/logout', (req, res) => {
     res.clearCookie('jwt_pharma');

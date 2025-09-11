@@ -92,11 +92,10 @@ const mapDynamoDBOrders = (enrichedOrders) => {
         doctor_id: o.doctor_id.S,
         pharma_id: o.pharma_id.S,
         patient_id: o.patient_id.S,
-        timings: Object.fromEntries(
-            Object.entries(o.timings.M).map(([key, value]) => [key, value.BOOL])
-        ),
+        timings: Object.fromEntries(Object.entries(o.timings.M).map(([key, value]) => [key, value.BOOL])),
         time: o.time.S,
         med_id: o.med_id.S,
+        medicine_name: o.medicine_name,
         price: parseFloat(o.price.N),
         doctor_name: o.doctor_name,
         patient_name: o.patient_name,

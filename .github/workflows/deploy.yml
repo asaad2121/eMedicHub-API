@@ -1,49 +1,49 @@
 name: Node.js CI/CD
 
 on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+    push:
+        branches: [main]
+    pull_request:
+        branches: [main]
 
 jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    environment: GitHub-Actions-env
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+    deploy:
+        runs-on: ubuntu-latest
+        environment: GitHub-Actions-env
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v3
 
-      - name: Set up SSH
-        uses: webfactory/ssh-agent@v0.9.0
-        with:
-          ssh-private-key: ${{ secrets.EC2_SSH_KEY }}
+            - name: Set up SSH
+              uses: webfactory/ssh-agent@v0.9.0
+              with:
+                  ssh-private-key: ${{ secrets.EC2_SSH_KEY }}
 
-      - name: Deploy to EC2
-        run: |
-          ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
-            set -e
-            export NVM_DIR="$HOME/.nvm"
-            [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+            - name: Deploy to EC2
+              run: |
+                  ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
+                    set -e
+                    export NVM_DIR="$HOME/.nvm"
+                    [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
 
-            # Install a specific Node.js version
-            nvm install 20.18.3
-            nvm use 20.18.3
-            nvm alias default 20.18.3
+                    # Install a specific Node.js version
+                    nvm install 20.18.3
+                    nvm use 20.18.3
+                    nvm alias default 20.18.3
 
-            cd /home/ec2-user/eMedicHub-API || exit 1
+                    cd /home/ec2-user/eMedicHub-API || exit 1
 
-            echo "Pulling latest code..."
-            git fetch origin main
-            git reset --hard origin/main
+                    echo "Pulling latest code..."
+                    git fetch origin main
+                    git reset --hard origin/main
 
-            echo "Installing dependencies..."
-            npm install
+                    echo "Installing dependencies..."
+                    npm install
 
-            echo "Starting Node.js app using PM2..."
-            pm2 delete emedic-api || true
-            pm2 start npm --name emedic-api -- run dev
-            pm2 save
+                    echo "Starting Node.js app using PM2..."
+                    pm2 delete emedic-api || true
+                    pm2 start npm --name emedic-api -- run dev
+                    pm2 save
 
-            echo "Deployment complete!"
-          EOF
+                    echo "Deployment complete!"
+                  EOF
