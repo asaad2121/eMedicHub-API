@@ -9,8 +9,6 @@ const { getNextId } = require('./utils/functions');
 const { mapDynamoDBOrders } = require('./utils/functions');
 const { OrderStatus } = require('./utils/constants');
 
-
-
 const client = new DynamoDBClient({ region: process.env.AWS_REGION });
 
 const searchMedicines = async (req, res) => {
@@ -214,11 +212,13 @@ const getOrders = async (req, res) => {
         const patientIds = [...new Set(paginatedOrders.map((o) => o?.patient_id?.S))];
         const doctorIds = [...new Set(paginatedOrders.map((o) => o?.doctor_id?.S))];
         const pharmaIds = [...new Set(paginatedOrders.map((o) => o?.pharma_id?.S))];
+        const medIds = [...new Set(paginatedOrders.map((o) => o?.med_id?.S))];
 
         const requestItems = {};
         if (patientIds?.length > 0) requestItems.Patients = { Keys: patientIds?.map((id) => ({ id: { S: id } })) };
         if (doctorIds?.length > 0) requestItems.Doctors = { Keys: doctorIds?.map((id) => ({ id: { S: id } })) };
         if (pharmaIds?.length > 0) requestItems.Pharmacy = { Keys: pharmaIds?.map((id) => ({ id: { S: id } })) };
+        if (medIds?.length > 0) requestItems.Medicines = { Keys: medIds?.map((id) => ({ id: { S: id } })) };
 
         let batchResult = { Responses: {} };
         if (Object.keys(requestItems)?.length > 0) {
@@ -241,12 +241,16 @@ const getOrders = async (req, res) => {
         const pharmaMap = Object.fromEntries(
             (batchResult.Responses?.Pharmacy || []).map((ph) => [ph.id?.S, ph.name?.S])
         );
+        const medicineMap = Object.fromEntries(
+            (batchResult.Responses?.Medicines || []).map((m) => [m.id?.S, m.name?.S])
+        );
 
         const enrichedOrders = paginatedOrders?.map((o) => ({
             ...o,
             patient_name: patientMap[o.patient_id.S],
             doctor_name: doctorMap[o.doctor_id.S],
             pharma_name: pharmaMap[o.pharma_id.S],
+            medicine_name: medicineMap[o.med_id?.S],
         }));
 
         const mappedOrders = mapDynamoDBOrders(enrichedOrders);

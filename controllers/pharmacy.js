@@ -93,13 +93,12 @@ const updateOrderStatus = async (req, res) => {
             ReturnValues: 'ALL_NEW',
         });
 
-        
         const updatedOrder = await client.send(updateCmd);
-        
+
         const updatedValues = {
             id: updatedOrder.Attributes.id.S,
-            status: updatedOrder.Attributes.status.S
-        }
+            status: updatedOrder.Attributes.status.S,
+        };
         return res.status(200).json({
             success: true,
             message: 'Order status updated successfully',
@@ -113,5 +112,5 @@ const updateOrderStatus = async (req, res) => {
 
 module.exports = {
     loginPharma,
-    updateOrderStatus
+    updateOrderStatus,
 };
