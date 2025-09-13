@@ -39,7 +39,7 @@ const getAllDoctors = async (req, res) => {
 };
 
 const loginDoctors = async (req, res) => {
-    const { email, password } = req.body;
+    const { email, password, stayLoggedIn } = req.body;
 
     try {
         const command = new QueryCommand({
@@ -63,8 +63,11 @@ const loginDoctors = async (req, res) => {
             return res.status(401).json({ success: false, message: 'Invalid credentials' });
         }
 
+        const refreshTokenExpiresIn = req.body.stayLoggedIn ? '30d' : '1d';
+        const refreshTokenMaxAge = stayLoggedIn ? 2592000000 : null;
+
         const token = jwt.sign({ _id: doctor.id.S }, process.env.JWT_SECRET, { expiresIn: '30m' });
-        const refreshToken = jwt.sign({ _id: doctor.id.S }, process.env.JWT_REFRESH_SECRET, { expiresIn: '7d' });
+        const refreshToken = jwt.sign({ _id: doctor.id.S }, process.env.JWT_REFRESH_SECRET, { expiresIn: refreshTokenExpiresIn });
 
         res.cookie('jwt_doctor', token, {
             httpOnly: true,
@@ -74,7 +77,7 @@ const loginDoctors = async (req, res) => {
 
         res.cookie('refresh_token_doctor', refreshToken, {
             httpOnly: true,
-            maxAge: 604800000, // 7 days
+            maxAge: refreshTokenMaxAge, 
             secure: process.env.ENVIRONMENT === 'prod',
             sameSite: process.env.ENVIRONMENT === 'prod' ? 'None' : 'Lax',
         });
