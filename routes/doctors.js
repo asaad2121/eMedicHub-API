@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { loginDoctors, addNewPatientPost, addNewPatientGet, viewPatients } = require('../controllers/doctors');
 const { check, validationResult } = require('express-validator');
-const { authenticateToken } = require('../middleware/session-authentication-middleware');
+const { authenticateToken, authenticateRefreshToken } = require('../middleware/session-authentication-middleware');
 const { viewAppointments, viewAppointmentData } = require('../controllers/patients');
 
 router.post(
@@ -33,6 +33,8 @@ router.get('/logout', (req, res) => {
     res.clearCookie('jwt_doctor');
     return res.json({ success: true, message: 'Signout success!' });
 });
+
+router.post('/auth/refresh', authenticateRefreshToken('doctor'));
 
 router.get('/addNewPatient', (req, res, next) => authenticateToken('doctor', req, res, next), addNewPatientGet);
 router.get('/viewAppointments', (req, res, next) => authenticateToken('doctor', req, res, next), viewAppointments);

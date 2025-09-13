@@ -64,11 +64,19 @@ const loginDoctors = async (req, res) => {
         }
 
         const token = jwt.sign({ _id: doctor.id.S }, process.env.JWT_SECRET, { expiresIn: '30m' });
+        const refreshToken = jwt.sign({ _id: doctor.id.S }, process.env.JWT_REFRESH_SECRET, { expiresIn: '7d' });
 
         res.cookie('jwt_doctor', token, {
             httpOnly: true,
             secure: process.env.ENVIRONMENT === 'prod',
-            sameSite: 'None',
+            sameSite: process.env.ENVIRONMENT === 'prod' ? 'None' : 'Lax',
+        });
+
+        res.cookie('refresh_token_doctor', refreshToken, {
+            httpOnly: true,
+            maxAge: 604800000, // 7 days
+            secure: process.env.ENVIRONMENT === 'prod',
+            sameSite: process.env.ENVIRONMENT === 'prod' ? 'None' : 'Lax',
         });
 
         const userData = {
