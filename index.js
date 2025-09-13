@@ -18,12 +18,7 @@ const allowedOrigins = [process.env.ANGULAR_APP_URL, process.env.ANGULAR_APP_WEB
 app.use(
     cors({
         origin: function (origin, callback) {
-            if (!origin) return callback(null, true);
-            if (allowedOrigins.includes(origin)) {
-                callback(null, true);
-            } else {
-                callback(new Error('Not allowed by CORS'));
-            }
+            if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
         },
         credentials: true,
     })
