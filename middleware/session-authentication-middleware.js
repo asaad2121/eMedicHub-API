@@ -19,7 +19,7 @@ const authenticateToken = (type, req, res, next) => {
                 httpOnly: true,
                 maxAge: 1800000,
                 secure: process.env.ENVIRONMENT === 'prod',
-                sameSite: 'Lax',
+                sameSite: 'None',
             });
         }
 

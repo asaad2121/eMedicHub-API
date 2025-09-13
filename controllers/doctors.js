@@ -68,7 +68,7 @@ const loginDoctors = async (req, res) => {
         res.cookie('jwt_doctor', token, {
             httpOnly: true,
             secure: process.env.ENVIRONMENT === 'prod',
-            sameSite: 'Lax',
+            sameSite: 'None',
         });
 
         const userData = {
