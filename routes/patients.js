@@ -9,7 +9,10 @@ const {
 } = require('../controllers/patients');
 const { check, validationResult } = require('express-validator');
 const { authenticateToken, authenticateRefreshToken } = require('../middleware/session-authentication-middleware');
-const { getAllDoctors } = require('../controllers/doctors');
+const { getAllDoctors, addNewPatientPost } = require('../controllers/doctors');
+const { getUserProfile } = require('../controllers/userInfo');
+
+router.get('/getUserProfile', (req, res, next) => authenticateToken('patient', req, res, next), getUserProfile);
 
 router.get('/getDoctors', (req, res, next) => authenticateToken('patient', req, res, next), getAllDoctors);
 router.get('/viewAppointments', (req, res, next) => authenticateToken('patient', req, res, next), viewAppointments);
@@ -81,6 +84,8 @@ router.post(
     },
     loginPatients
 );
+
+router.get('/signup', (req, res, next) => authenticateToken('patient', req, res, next), addNewPatientPost);
 
 router.get('/logout', (req, res) => {
     res.clearCookie('jwt_patient');

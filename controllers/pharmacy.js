@@ -37,14 +37,13 @@ const loginPharma = async (req, res) => {
             secure: process.env.ENVIRONMENT === 'prod',
             sameSite: process.env.ENVIRONMENT === 'prod' ? 'None' : 'Lax',
         });
-        
+
         res.cookie('refresh_token_pharma', refreshToken, {
             httpOnly: true,
             maxAge: 604800000, // 7 days
             secure: process.env.ENVIRONMENT === 'prod',
             sameSite: process.env.ENVIRONMENT === 'prod' ? 'None' : 'Lax',
         });
-
 
         const userData = {
             id: pharma.id.S,

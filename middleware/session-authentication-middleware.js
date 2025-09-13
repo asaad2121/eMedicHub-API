@@ -37,7 +37,9 @@ const authenticateRefreshToken = (type) => (req, res) => {
 
     jwt.verify(token, process.env.JWT_REFRESH_SECRET, (err, user) => {
         if (err) {
-            return res.status(403).json({ success: false, message: 'Forbidden: Invalid refresh token. Please log in again.' });
+            return res
+                .status(403)
+                .json({ success: false, message: 'Forbidden: Invalid refresh token. Please log in again.' });
         }
 
         // Refresh token is valid, generate and set new tokens.
@@ -63,5 +65,5 @@ const authenticateRefreshToken = (type) => (req, res) => {
 
 module.exports = {
     authenticateToken,
-    authenticateRefreshToken
+    authenticateRefreshToken,
 };
