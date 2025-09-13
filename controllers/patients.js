@@ -111,7 +111,7 @@ const loginPatients = async (req, res) => {
 
         const token = jwt.sign({ _id: patient.id.S }, process.env.JWT_SECRET, { expiresIn: '30m' });
         const refreshToken = jwt.sign({ _id: patient.id.S }, process.env.JWT_REFRESH_SECRET, { expiresIn: '7d' });
-        
+
         res.cookie('jwt_patient', token, {
             httpOnly: true,
             maxAge: 1800000,
