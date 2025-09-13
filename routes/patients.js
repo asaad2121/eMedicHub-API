@@ -8,7 +8,7 @@ const {
     viewAppointmentData,
 } = require('../controllers/patients');
 const { check, validationResult } = require('express-validator');
-const { authenticateToken } = require('../middleware/session-authentication-middleware');
+const { authenticateToken, authenticateRefreshToken } = require('../middleware/session-authentication-middleware');
 const { getAllDoctors } = require('../controllers/doctors');
 
 router.get('/getDoctors', (req, res, next) => authenticateToken('patient', req, res, next), getAllDoctors);
@@ -86,5 +86,7 @@ router.get('/logout', (req, res) => {
     res.clearCookie('jwt_patient');
     return res.json({ success: true, message: 'Signout success!' });
 });
+
+router.post('/auth/refresh', authenticateRefreshToken('patient'));
 
 module.exports = router;

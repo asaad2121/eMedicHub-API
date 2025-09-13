@@ -2,8 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { loginPharma, updateOrderStatus } = require('../controllers/pharmacy.js');
 const { check, validationResult } = require('express-validator');
-const { authenticateToken } = require('../middleware/session-authentication-middleware');
-// (req, res, next) => authenticateToken('pharma', req, res, next),
+const { authenticateToken, authenticateRefreshToken } = require('../middleware/session-authentication-middleware');
 
 router.post(
     '/login',
@@ -35,5 +34,7 @@ router.get('/logout', (req, res) => {
     res.clearCookie('jwt_pharma');
     return res.json({ success: true, message: 'Signout success!' });
 });
+
+router.post('/auth/refresh', authenticateRefreshToken('pharma'));
 
 module.exports = router;
