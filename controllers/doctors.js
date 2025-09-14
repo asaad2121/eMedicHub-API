@@ -122,7 +122,14 @@ const getDoctorById = async (req, res) => {
             return res.status(404).json({ success: false, message: 'Doctor not found' });
         }
 
-        return res.status(200).json({ success: true, data: doctor });
+        const mappedDoctor = {};
+        for (const key in doctor) {
+            if (Object.prototype.hasOwnProperty.call(doctor, key) && doctor[key].S && key !== 'password') {
+                mappedDoctor[key] = doctor[key].S;
+            }
+        }
+
+        return res.status(200).json({ success: true, data: mappedDoctor });
     } catch (err) {
         console.error('Error fetching doctor by ID:', err);
         return res.status(500).json({ success: false, message: 'Internal server error' });
