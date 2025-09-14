@@ -93,13 +93,15 @@ const resetPassword = async (req, res) => {
         if (!isMatch) return res.status(401).json({ success: false, message: 'Old password is incorrect' });
 
         const hashedPassword = await generateHashedPassword(newPassword);
+        const now = new Date().toISOString();
 
         const updateCmd = new UpdateItemCommand({
             TableName: tableName,
             Key: { id: { S: id } },
-            UpdateExpression: 'SET password = :newPassword',
+            UpdateExpression: 'SET password = :newPassword, last_password_update_utc = :now',
             ExpressionAttributeValues: {
                 ':newPassword': { S: hashedPassword },
+                ':now': { S: now },
             },
         });
 
@@ -107,7 +109,7 @@ const resetPassword = async (req, res) => {
 
         return res.status(200).json({
             success: true,
-            message: 'Password updated successfully',
+            message: 'Password updated successfully. All previous sessions are now invalid.',
         });
     } catch (err) {
         console.error('Error resetting password:', err);
