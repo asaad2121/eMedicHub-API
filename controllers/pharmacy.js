@@ -40,14 +40,13 @@ const loginPharma = async (req, res) => {
             secure: process.env.ENVIRONMENT === 'prod',
             sameSite: process.env.ENVIRONMENT === 'prod' ? 'None' : 'Lax',
         });
-        
+
         res.cookie('refresh_token_pharma', refreshToken, {
             httpOnly: true,
             maxAge: refreshTokenMaxAge,
             secure: process.env.ENVIRONMENT === 'prod',
             sameSite: process.env.ENVIRONMENT === 'prod' ? 'None' : 'Lax',
         });
-
 
         const userData = {
             id: pharma.id.S,
@@ -65,40 +64,6 @@ const loginPharma = async (req, res) => {
         });
     } catch (err) {
         console.error('Pharma login error:', err);
-        return res.status(500).json({ success: false, message: 'Internal server error' });
-    }
-};
-
-const getPharmaById = async (req, res) => {
-    const { id } = req.params;
-    
-    if (!id) {
-        return res.status(400).json({ success: false, message: 'Pharmacy ID is required' });
-    }
-
-    try {
-        const command = new GetItemCommand({
-            TableName: 'Pharmacy',
-            Key: { id: { S: id } },
-        });
-
-        const response = await client.send(command);
-        const pharmacy = response.Item || null;
-
-        if (!pharmacy) {
-            return res.status(404).json({ success: false, message: 'Pharmacy not found' });
-        }
-
-        const mappedPharmacy = {};
-        for (const key in pharmacy) {
-            if (Object.prototype.hasOwnProperty.call(pharmacy, key) && pharmacy[key].S && key !== 'password') {
-                mappedPharmacy[key] = pharmacy[key].S;
-            }
-        }
-
-        return res.status(200).json({ success: true, data: mappedPharmacy });
-    } catch (err) {
-        console.error('Error fetching pharmacy by ID:', err);
         return res.status(500).json({ success: false, message: 'Internal server error' });
     }
 };
@@ -159,6 +124,5 @@ const updateOrderStatus = async (req, res) => {
 
 module.exports = {
     loginPharma,
-    getPharmaById,
     updateOrderStatus,
 };

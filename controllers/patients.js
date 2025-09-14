@@ -149,40 +149,6 @@ const loginPatients = async (req, res) => {
     }
 };
 
-const getPatientById = async (req, res) => {
-    const { id } = req.params;
-    
-    if (!id) {
-        return res.status(400).json({ success: false, message: 'Patient ID is required' });
-    }
-
-    try {
-        const command = new GetItemCommand({
-            TableName: 'Patients',
-            Key: { id: { S: id } },
-        });
-
-        const response = await client.send(command);
-        const patient = response.Item || null;
-
-        if (!patient) {
-            return res.status(404).json({ success: false, message: 'Patient not found' });
-        }
-
-        const mappedPatient = {};
-        for (const key in patient) {
-            if (Object.prototype.hasOwnProperty.call(patient, key) && patient[key].S && key !== 'password') {
-                mappedPatient[key] = patient[key].S;
-            }
-        }
-
-        return res.status(200).json({ success: true, data: mappedPatient });
-    } catch (err) {
-        console.error('Error fetching patient by ID:', err);
-        return res.status(500).json({ success: false, message: 'Internal server error' });
-    }
-};
-
 const viewAppointments = async (req, res) => {
     try {
         const { type, doctor_id, patient_id, start_date, end_date, limit = 10, currentPageNo = 1 } = req.query;
@@ -379,7 +345,6 @@ const viewAppointmentData = async (req, res) => {
 
 module.exports = {
     loginPatients,
-    getPatientById,
     checkDoctorAvailability,
     createNewAppointment,
     viewAppointments,

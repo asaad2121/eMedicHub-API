@@ -102,40 +102,6 @@ const getAllDoctors = async (req, res) => {
     }
 };
 
-const getDoctorById = async (req, res) => {
-    const { id } = req.params;
-    
-    if (!id) {
-        return res.status(400).json({ success: false, message: 'Doctor ID is required' });
-    }
-
-    try {
-        const command = new GetItemCommand({
-            TableName: 'Doctors',
-            Key: { id: { S: id } },
-        });
-
-        const response = await client.send(command);
-        const doctor = response.Item || null;
-
-        if (!doctor) {
-            return res.status(404).json({ success: false, message: 'Doctor not found' });
-        }
-
-        const mappedDoctor = {};
-        for (const key in doctor) {
-            if (Object.prototype.hasOwnProperty.call(doctor, key) && doctor[key].S && key !== 'password') {
-                mappedDoctor[key] = doctor[key].S;
-            }
-        }
-
-        return res.status(200).json({ success: true, data: mappedDoctor });
-    } catch (err) {
-        console.error('Error fetching doctor by ID:', err);
-        return res.status(500).json({ success: false, message: 'Internal server error' });
-    }
-};
-
 const addNewPatientGet = async (req, res) => {
     try {
         const command = new ScanCommand({
@@ -192,6 +158,16 @@ const addNewPatientPost = async (req, res) => {
         if (!Object.values(BloodGroups).includes(blood_grp))
             return res.status(400).json({ success: false, message: 'Invalid blood_grp' });
 
+        const dobDate = new Date(dob);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        if (isNaN(dobDate?.getTime())) {
+            return res.status(400).json({ success: false, message: 'Invalid date format for dob' });
+        }
+        if (dobDate >= today) {
+            return res.status(400).json({ success: false, message: 'Date of birth must be before today' });
+        }
         const hashedPassword = await generateHashedPassword(password);
 
         const patientItem = {
@@ -395,7 +371,6 @@ const viewPatients = async (req, res) => {
 module.exports = {
     loginDoctors,
     getAllDoctors,
-    getDoctorById,
     addNewPatientPost,
     addNewPatientGet,
     viewPatients,
