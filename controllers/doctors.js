@@ -155,6 +155,16 @@ const addNewPatientPost = async (req, res) => {
         if (!Object.values(BloodGroups).includes(blood_grp))
             return res.status(400).json({ success: false, message: 'Invalid blood_grp' });
 
+        const dobDate = new Date(dob);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        if (isNaN(dobDate?.getTime())) {
+            return res.status(400).json({ success: false, message: 'Invalid date format for dob' });
+        }
+        if (dobDate >= today) {
+            return res.status(400).json({ success: false, message: 'Date of birth must be before today' });
+        }
         const hashedPassword = await generateHashedPassword(password);
 
         const patientItem = {
