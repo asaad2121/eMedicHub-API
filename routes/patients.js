@@ -12,7 +12,7 @@ const { authenticateToken, authenticateRefreshToken } = require('../middleware/s
 const { getAllDoctors, addNewPatientPost } = require('../controllers/doctors');
 const { getUserProfile } = require('../controllers/userInfo');
 
-router.get('/getUserProfile', (req, res, next) => authenticateToken('patient', req, res, next), getUserProfile);
+router.get('/getUserProfile/:id', (req, res, next) => authenticateToken('patient', req, res, next), getUserProfile);
 
 router.get('/getDoctors', (req, res, next) => authenticateToken('patient', req, res, next), getAllDoctors);
 router.get('/viewAppointments', (req, res, next) => authenticateToken('patient', req, res, next), viewAppointments);

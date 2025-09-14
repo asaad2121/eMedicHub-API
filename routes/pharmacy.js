@@ -5,7 +5,7 @@ const { check, validationResult } = require('express-validator');
 const { authenticateToken, authenticateRefreshToken } = require('../middleware/session-authentication-middleware');
 const { getUserProfile } = require('../controllers/userInfo.js');
 
-router.get('/getUserProfile', (req, res, next) => authenticateToken('pharma', req, res, next), getUserProfile);
+router.get('/getUserProfile/:id', (req, res, next) => authenticateToken('pharma', req, res, next), getUserProfile);
 
 router.post(
     '/login',

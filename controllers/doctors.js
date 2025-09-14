@@ -12,34 +12,8 @@ const { verifyPassword, generateHashedPassword, getNextId } = require('./utils/f
 
 const client = new DynamoDBClient({ region: process.env.AWS_REGION });
 
-const getAllDoctors = async (req, res) => {
-    try {
-        const command = new ScanCommand({
-            TableName: 'Doctors',
-        });
-
-        const response = await client.send(command);
-
-        const doctors = response.Items.map((doc) => ({
-            id: doc.id.S,
-            first_name: doc.first_name?.S,
-            last_name: doc.last_name?.S,
-            visiting_hours: doc.visiting_hours?.M || {},
-        }));
-
-        return res.status(200).json({
-            success: true,
-            message: 'All doctors fetched',
-            data: doctors,
-        });
-    } catch (err) {
-        console.error('Error fetching doctors:', err);
-        return res.status(500).json({ success: false, message: 'Internal server error' });
-    }
-};
-
 const loginDoctors = async (req, res) => {
-    const { email, password } = req.body;
+    const { email, password, stayLoggedIn } = req.body;
 
     try {
         const command = new QueryCommand({
@@ -63,8 +37,13 @@ const loginDoctors = async (req, res) => {
             return res.status(401).json({ success: false, message: 'Invalid credentials' });
         }
 
+        const refreshTokenExpiresIn = req.body.stayLoggedIn ? '30d' : '1d';
+        const refreshTokenMaxAge = stayLoggedIn ? 2592000000 : null;
+
         const token = jwt.sign({ _id: doctor.id.S }, process.env.JWT_SECRET, { expiresIn: '30m' });
-        const refreshToken = jwt.sign({ _id: doctor.id.S }, process.env.JWT_REFRESH_SECRET, { expiresIn: '7d' });
+        const refreshToken = jwt.sign({ _id: doctor.id.S }, process.env.JWT_REFRESH_SECRET, {
+            expiresIn: refreshTokenExpiresIn,
+        });
 
         res.cookie('jwt_doctor', token, {
             httpOnly: true,
@@ -74,7 +53,7 @@ const loginDoctors = async (req, res) => {
 
         res.cookie('refresh_token_doctor', refreshToken, {
             httpOnly: true,
-            maxAge: 604800000, // 7 days
+            maxAge: refreshTokenMaxAge,
             secure: process.env.ENVIRONMENT === 'prod',
             sameSite: process.env.ENVIRONMENT === 'prod' ? 'None' : 'Lax',
         });
@@ -95,6 +74,32 @@ const loginDoctors = async (req, res) => {
         });
     } catch (err) {
         console.error('Login error:', err);
+        return res.status(500).json({ success: false, message: 'Internal server error' });
+    }
+};
+
+const getAllDoctors = async (req, res) => {
+    try {
+        const command = new ScanCommand({
+            TableName: 'Doctors',
+        });
+
+        const response = await client.send(command);
+
+        const doctors = response.Items.map((doc) => ({
+            id: doc.id.S,
+            first_name: doc.first_name?.S,
+            last_name: doc.last_name?.S,
+            visiting_hours: doc.visiting_hours?.M || {},
+        }));
+
+        return res.status(200).json({
+            success: true,
+            message: 'All doctors fetched',
+            data: doctors,
+        });
+    } catch (err) {
+        console.error('Error fetching doctors:', err);
         return res.status(500).json({ success: false, message: 'Internal server error' });
     }
 };

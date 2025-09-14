@@ -6,7 +6,7 @@ const { authenticateToken, authenticateRefreshToken } = require('../middleware/s
 const { viewAppointments, viewAppointmentData } = require('../controllers/patients');
 const { getUserProfile } = require('../controllers/userInfo');
 
-router.get('/getUserProfile', (req, res, next) => authenticateToken('doctor', req, res, next), getUserProfile);
+router.get('/getUserProfile/:id', (req, res, next) => authenticateToken('doctor', req, res, next), getUserProfile);
 
 router.post(
     '/login',

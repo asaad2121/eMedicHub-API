@@ -88,7 +88,7 @@ const createNewAppointment = async (req, res) => {
 };
 
 const loginPatients = async (req, res) => {
-    const { email, password } = req.body;
+    const { email, password, stayLoggedIn } = req.body;
 
     try {
         const command = new QueryCommand({
@@ -109,8 +109,13 @@ const loginPatients = async (req, res) => {
         const isMatch = await bcrypt.compare(password, hashedPassword);
         if (!isMatch) return res.status(401).json({ success: false, message: 'Invalid credentials' });
 
+        const refreshTokenExpiresIn = req.body.stayLoggedIn ? '30d' : '1d';
+        const refreshTokenMaxAge = stayLoggedIn ? 2592000000 : null;
+
         const token = jwt.sign({ _id: patient.id.S }, process.env.JWT_SECRET, { expiresIn: '30m' });
-        const refreshToken = jwt.sign({ _id: patient.id.S }, process.env.JWT_REFRESH_SECRET, { expiresIn: '7d' });
+        const refreshToken = jwt.sign({ _id: patient.id.S }, process.env.JWT_REFRESH_SECRET, {
+            expiresIn: refreshTokenExpiresIn,
+        });
 
         res.cookie('jwt_patient', token, {
             httpOnly: true,
@@ -121,7 +126,7 @@ const loginPatients = async (req, res) => {
 
         res.cookie('refresh_token_patient', refreshToken, {
             httpOnly: true,
-            maxAge: 604800000, // 7 days
+            maxAge: refreshTokenMaxAge,
             secure: process.env.ENVIRONMENT === 'prod',
             sameSite: process.env.ENVIRONMENT === 'prod' ? 'None' : 'Lax',
         });

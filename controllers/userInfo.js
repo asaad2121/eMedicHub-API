@@ -4,7 +4,7 @@ const client = new DynamoDBClient({ region: process.env.AWS_REGION });
 
 const getUserProfile = async (req, res) => {
     try {
-        const { id } = req.query;
+        const { id } = req.params;
 
         if (!id) {
             return res.status(400).json({ success: false, message: 'User ID is required' });
