@@ -12,32 +12,6 @@ const { verifyPassword, generateHashedPassword, getNextId } = require('./utils/f
 
 const client = new DynamoDBClient({ region: process.env.AWS_REGION });
 
-const getAllDoctors = async (req, res) => {
-    try {
-        const command = new ScanCommand({
-            TableName: 'Doctors',
-        });
-
-        const response = await client.send(command);
-
-        const doctors = response.Items.map((doc) => ({
-            id: doc.id.S,
-            first_name: doc.first_name?.S,
-            last_name: doc.last_name?.S,
-            visiting_hours: doc.visiting_hours?.M || {},
-        }));
-
-        return res.status(200).json({
-            success: true,
-            message: 'All doctors fetched',
-            data: doctors,
-        });
-    } catch (err) {
-        console.error('Error fetching doctors:', err);
-        return res.status(500).json({ success: false, message: 'Internal server error' });
-    }
-};
-
 const loginDoctors = async (req, res) => {
     const { email, password, stayLoggedIn } = req.body;
 
@@ -98,6 +72,59 @@ const loginDoctors = async (req, res) => {
         });
     } catch (err) {
         console.error('Login error:', err);
+        return res.status(500).json({ success: false, message: 'Internal server error' });
+    }
+};
+
+const getAllDoctors = async (req, res) => {
+    try {
+        const command = new ScanCommand({
+            TableName: 'Doctors',
+        });
+
+        const response = await client.send(command);
+
+        const doctors = response.Items.map((doc) => ({
+            id: doc.id.S,
+            first_name: doc.first_name?.S,
+            last_name: doc.last_name?.S,
+            visiting_hours: doc.visiting_hours?.M || {},
+        }));
+
+        return res.status(200).json({
+            success: true,
+            message: 'All doctors fetched',
+            data: doctors,
+        });
+    } catch (err) {
+        console.error('Error fetching doctors:', err);
+        return res.status(500).json({ success: false, message: 'Internal server error' });
+    }
+};
+
+const getDoctorById = async (req, res) => {
+    const { id } = req.params;
+    
+    if (!id) {
+        return res.status(400).json({ success: false, message: 'Doctor ID is required' });
+    }
+
+    try {
+        const command = new GetItemCommand({
+            TableName: 'Doctors',
+            Key: { id: { S: id } },
+        });
+
+        const response = await client.send(command);
+        const doctor = response.Item || null;
+
+        if (!doctor) {
+            return res.status(404).json({ success: false, message: 'Doctor not found' });
+        }
+
+        return res.status(200).json({ success: true, data: doctor });
+    } catch (err) {
+        console.error('Error fetching doctor by ID:', err);
         return res.status(500).json({ success: false, message: 'Internal server error' });
     }
 };
@@ -361,6 +388,7 @@ const viewPatients = async (req, res) => {
 module.exports = {
     loginDoctors,
     getAllDoctors,
+    getDoctorById,
     addNewPatientPost,
     addNewPatientGet,
     viewPatients,

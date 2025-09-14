@@ -6,10 +6,13 @@ const {
     createNewAppointment,
     viewAppointments,
     viewAppointmentData,
+    getPatientById
 } = require('../controllers/patients');
 const { check, validationResult } = require('express-validator');
 const { authenticateToken, authenticateRefreshToken } = require('../middleware/session-authentication-middleware');
 const { getAllDoctors } = require('../controllers/doctors');
+
+router.get('/getPatient/:id', (req, res, next) => authenticateToken('patient', req, res, next), getPatientById);
 
 router.get('/getDoctors', (req, res, next) => authenticateToken('patient', req, res, next), getAllDoctors);
 router.get('/viewAppointments', (req, res, next) => authenticateToken('patient', req, res, next), viewAppointments);

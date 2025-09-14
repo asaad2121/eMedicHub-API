@@ -69,6 +69,33 @@ const loginPharma = async (req, res) => {
     }
 };
 
+const getPharmaById = async (req, res) => {
+    const { id } = req.params;
+    
+    if (!id) {
+        return res.status(400).json({ success: false, message: 'Pharmacy ID is required' });
+    }
+
+    try {
+        const command = new GetItemCommand({
+            TableName: 'Pharmacy',
+            Key: { id: { S: id } },
+        });
+
+        const response = await client.send(command);
+        const pharmacy = response.Item || null;
+
+        if (!pharmacy) {
+            return res.status(404).json({ success: false, message: 'Pharmacy not found' });
+        }
+
+        return res.status(200).json({ success: true, data: pharmacy });
+    } catch (err) {
+        console.error('Error fetching pharmacy by ID:', err);
+        return res.status(500).json({ success: false, message: 'Internal server error' });
+    }
+};
+
 const updateOrderStatus = async (req, res) => {
     try {
         const { order_id, status, pharma_id } = req.body;
@@ -125,5 +152,6 @@ const updateOrderStatus = async (req, res) => {
 
 module.exports = {
     loginPharma,
+    getPharmaById,
     updateOrderStatus,
 };
