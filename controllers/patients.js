@@ -88,7 +88,7 @@ const createNewAppointment = async (req, res) => {
 };
 
 const loginPatients = async (req, res) => {
-    const { email, password, stayLoggedIn} = req.body;
+    const { email, password, stayLoggedIn } = req.body;
 
     try {
         const command = new QueryCommand({
@@ -113,8 +113,10 @@ const loginPatients = async (req, res) => {
         const refreshTokenMaxAge = stayLoggedIn ? 2592000000 : null;
 
         const token = jwt.sign({ _id: patient.id.S }, process.env.JWT_SECRET, { expiresIn: '30m' });
-        const refreshToken = jwt.sign({ _id: patient.id.S }, process.env.JWT_REFRESH_SECRET, { expiresIn: refreshTokenExpiresIn });
-        
+        const refreshToken = jwt.sign({ _id: patient.id.S }, process.env.JWT_REFRESH_SECRET, {
+            expiresIn: refreshTokenExpiresIn,
+        });
+
         res.cookie('jwt_patient', token, {
             httpOnly: true,
             maxAge: 1800000,

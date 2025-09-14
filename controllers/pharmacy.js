@@ -32,7 +32,9 @@ const loginPharma = async (req, res) => {
         const refreshTokenMaxAge = stayLoggedIn ? 2592000000 : null;
 
         const token = jwt.sign({ _id: pharma.id.S }, process.env.JWT_SECRET, { expiresIn: '30m' });
-        const refreshToken = jwt.sign({ _id: pharma.id.S }, process.env.JWT_REFRESH_SECRET, { expiresIn: refreshTokenExpiresIn });
+        const refreshToken = jwt.sign({ _id: pharma.id.S }, process.env.JWT_REFRESH_SECRET, {
+            expiresIn: refreshTokenExpiresIn,
+        });
 
         res.cookie('jwt_pharma', token, {
             httpOnly: true,

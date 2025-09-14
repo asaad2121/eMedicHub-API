@@ -41,7 +41,9 @@ const loginDoctors = async (req, res) => {
         const refreshTokenMaxAge = stayLoggedIn ? 2592000000 : null;
 
         const token = jwt.sign({ _id: doctor.id.S }, process.env.JWT_SECRET, { expiresIn: '30m' });
-        const refreshToken = jwt.sign({ _id: doctor.id.S }, process.env.JWT_REFRESH_SECRET, { expiresIn: refreshTokenExpiresIn });
+        const refreshToken = jwt.sign({ _id: doctor.id.S }, process.env.JWT_REFRESH_SECRET, {
+            expiresIn: refreshTokenExpiresIn,
+        });
 
         res.cookie('jwt_doctor', token, {
             httpOnly: true,
@@ -51,7 +53,7 @@ const loginDoctors = async (req, res) => {
 
         res.cookie('refresh_token_doctor', refreshToken, {
             httpOnly: true,
-            maxAge: refreshTokenMaxAge, 
+            maxAge: refreshTokenMaxAge,
             secure: process.env.ENVIRONMENT === 'prod',
             sameSite: process.env.ENVIRONMENT === 'prod' ? 'None' : 'Lax',
         });
