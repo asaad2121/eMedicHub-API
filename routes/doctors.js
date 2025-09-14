@@ -7,7 +7,27 @@ const { viewAppointments, viewAppointmentData } = require('../controllers/patien
 const { getUserProfile, resetPassword } = require('../controllers/userInfo');
 
 router.get('/getUserProfile/:id', (req, res, next) => authenticateToken('doctor', req, res, next), getUserProfile);
-router.get('/resetPassword', (req, res, next) => authenticateToken('doctor', req, res, next), resetPassword);
+
+router.post(
+    '/resetPassword',
+    [
+        check('id', 'ID cannot be empty').notEmpty(),
+        check('oldPassword', 'Old Password cannot be empty').notEmpty(),
+        check('newPassword', 'New Password cannot be empty').notEmpty(),
+    ],
+    (req, res, next) => {
+        const errors = validationResult(req);
+
+        if (!errors.isEmpty()) {
+            res.status(400).json({ success: false, error: errors.array() });
+            return;
+        }
+
+        next();
+    },
+    (req, res, next) => authenticateToken('doctor', req, res, next),
+    resetPassword
+);
 
 router.post(
     '/login',
