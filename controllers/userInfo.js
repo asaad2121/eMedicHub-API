@@ -56,6 +56,68 @@ const getUserProfile = async (req, res) => {
     }
 };
 
+const resetPassword = async (req, res) => {
+    try {
+        const { id, oldPassword, newPassword } = req.body;
+
+        if (!id || !oldPassword || !newPassword) {
+            return res.status(400).json({ success: false, message: 'id, oldPassword, and newPassword are required' });
+        }
+
+        let tableName;
+        if (id.startsWith('DOC')) {
+            tableName = 'Doctors';
+        } else if (id.startsWith('PAT')) {
+            tableName = 'Patients';
+        } else if (id.startsWith('PHAR')) {
+            tableName = 'Pharmacy';
+        } else {
+            return res.status(400).json({ success: false, message: 'Invalid user ID' });
+        }
+
+        const getCmd = new GetItemCommand({
+            TableName: tableName,
+            Key: { id: { S: id } },
+        });
+
+        const result = await client.send(getCmd);
+
+        if (!result.Item) {
+            return res.status(404).json({ success: false, message: 'User not found' });
+        }
+
+        const storedHash = result.Item.password?.S;
+        if (!storedHash) return res.status(500).json({ success: false, message: 'User has no password set' });
+
+        const isMatch = await bcrypt.compare(oldPassword, storedHash);
+        if (!isMatch) return res.status(401).json({ success: false, message: 'Old password is incorrect' });
+
+        const hashedPassword = await generateHashedPassword(newPassword);
+        const now = new Date().toISOString();
+
+        const updateCmd = new UpdateItemCommand({
+            TableName: tableName,
+            Key: { id: { S: id } },
+            UpdateExpression: 'SET password = :newPassword, last_password_update_utc = :now',
+            ExpressionAttributeValues: {
+                ':newPassword': { S: hashedPassword },
+                ':now': { S: now },
+            },
+        });
+
+        await client.send(updateCmd);
+
+        return res.status(200).json({
+            success: true,
+            message: 'Password updated successfully. All previous sessions are now invalid.',
+        });
+    } catch (err) {
+        console.error('Error resetting password:', err);
+        return res.status(500).json({ success: false, message: 'Internal server error', error: err.message });
+    }
+};
+
 module.exports = {
     getUserProfile,
+    resetPassword,
 };

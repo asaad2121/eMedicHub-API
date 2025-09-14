@@ -4,9 +4,10 @@ const { loginDoctors, addNewPatientPost, addNewPatientGet, viewPatients } = requ
 const { check, validationResult } = require('express-validator');
 const { authenticateToken, authenticateRefreshToken } = require('../middleware/session-authentication-middleware');
 const { viewAppointments, viewAppointmentData } = require('../controllers/patients');
-const { getUserProfile } = require('../controllers/userInfo');
+const { getUserProfile, resetPassword } = require('../controllers/userInfo');
 
 router.get('/getUserProfile/:id', (req, res, next) => authenticateToken('doctor', req, res, next), getUserProfile);
+router.get('/resetPassword', (req, res, next) => authenticateToken('doctor', req, res, next), resetPassword);
 
 router.post(
     '/login',

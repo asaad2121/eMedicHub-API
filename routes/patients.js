@@ -10,9 +10,10 @@ const {
 const { check, validationResult } = require('express-validator');
 const { authenticateToken, authenticateRefreshToken } = require('../middleware/session-authentication-middleware');
 const { getAllDoctors, addNewPatientPost } = require('../controllers/doctors');
-const { getUserProfile } = require('../controllers/userInfo');
+const { getUserProfile, resetPassword } = require('../controllers/userInfo');
 
 router.get('/getUserProfile/:id', (req, res, next) => authenticateToken('patient', req, res, next), getUserProfile);
+router.get('/resetPassword', (req, res, next) => authenticateToken('doctor', req, res, next), resetPassword);
 
 router.get('/getDoctors', (req, res, next) => authenticateToken('patient', req, res, next), getAllDoctors);
 router.get('/viewAppointments', (req, res, next) => authenticateToken('patient', req, res, next), viewAppointments);
