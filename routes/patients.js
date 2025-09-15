@@ -35,7 +35,11 @@ router.post(
 );
 
 router.get('/getDoctors', (req, res, next) => authenticateToken('patient', req, res, next), getAllDoctors);
-router.get('/viewAppointments', (req, res, next) => authenticateToken(req.query.type, req, res, next), viewAppointments);
+router.get(
+    '/viewAppointments',
+    (req, res, next) => authenticateToken(req.query.type, req, res, next),
+    viewAppointments
+);
 router.get(
     '/viewAppointmentData',
     (req, res, next) => authenticateToken('patient', req, res, next),

@@ -61,7 +61,11 @@ router.get('/logout', (req, res) => {
 router.post('/auth/refresh', authenticateRefreshToken('doctor'));
 
 router.get('/addNewPatient', (req, res, next) => authenticateToken('doctor', req, res, next), addNewPatientGet);
-router.get('/viewAppointments', (req, res, next) => authenticateToken(req.query.type, req, res, next), viewAppointments);
+router.get(
+    '/viewAppointments',
+    (req, res, next) => authenticateToken(req.query.type, req, res, next),
+    viewAppointments
+);
 router.get('/viewPatients', (req, res, next) => authenticateToken('doctor', req, res, next), viewPatients);
 router.get(
     '/viewAppointmentData',
