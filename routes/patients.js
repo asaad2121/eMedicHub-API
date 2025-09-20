@@ -30,7 +30,7 @@ router.post(
 
         next();
     },
-    // (req, res, next) => authenticateToken('patient', req, res, next),
+    (req, res, next) => authenticateToken('patient', req, res, next),
     resetPassword
 );
 
