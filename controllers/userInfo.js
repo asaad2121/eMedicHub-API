@@ -1,5 +1,5 @@
 const { DynamoDBClient, GetItemCommand } = require('@aws-sdk/client-dynamodb');
-
+const bcrypt = require('bcryptjs');
 const client = new DynamoDBClient({ region: process.env.AWS_REGION });
 
 const getUserProfile = async (req, res) => {
