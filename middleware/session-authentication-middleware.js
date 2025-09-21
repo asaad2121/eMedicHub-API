@@ -4,10 +4,10 @@ const client = new DynamoDBClient({ region: process.env.AWS_REGION });
 
 const authenticateToken = (type, req, res, next) => {
     const token = req.cookies[`jwt_${type}`];
-    if (!token) return res.status(401).json({ success: false, message: 'Unauthorized' });
+    if (!token) return res.status(401).json({ success: false, message: 'Unauthorized: No token provided' });
 
     jwt.verify(token, process.env.JWT_SECRET, async (err, user) => {
-        if (err) return res.status(403).json({ success: false, message: 'Invalid token' });
+        if (err) return res.status(403).json({ success: false, message: 'Invalid or expired token' });
 
         try {
             let tableName;
@@ -50,7 +50,7 @@ const authenticateToken = (type, req, res, next) => {
                     sameSite: process.env.ENVIRONMENT === 'prod' ? 'None' : 'Lax',
                 });
                 req.user = jwt.decode(newToken);
-                next();
+                return next();
             }
 
             req.user = user;
@@ -69,19 +69,54 @@ const authenticateRefreshToken = (type) => (req, res) => {
         return res.status(401).json({ success: false, message: 'Unauthorized: No refresh token provided.' });
     }
 
-    jwt.verify(token, process.env.JWT_REFRESH_SECRET, (err, user) => {
+    jwt.verify(token, process.env.JWT_REFRESH_SECRET, async (err, user) => {
         if (err) {
             return res
                 .status(403)
                 .json({ success: false, message: 'Forbidden: Invalid refresh token. Please log in again.' });
         }
 
-        // Refresh token is valid, generate and set new tokens.
-        const newAccessToken = jwt.sign({ _id: user._id }, process.env.JWT_SECRET, { expiresIn: '30m' });
-        const newRefreshToken = jwt.sign({ _id: user._id }, process.env.JWT_REFRESH_SECRET, { expiresIn: '7d' });
+        let tableName;
+        if (user._id.startsWith('DOC')) tableName = 'Doctors';
+        else if (user._id.startsWith('PAT')) tableName = 'Patients';
+        else if (user._id.startsWith('PHAR')) tableName = 'Pharmacy';
+        else return res.status(400).json({ success: false, message: 'Invalid user ID prefix' });
+
+        const getCmd = new GetItemCommand({
+            TableName: tableName,
+            Key: { id: { S: user._id } },
+            ProjectionExpression: 'last_password_update_utc',
+        });
+
+        const result = await client.send(getCmd);
+        const lastPwUpdateDb = result.Item?.last_password_update_utc?.S;
+
+        if (lastPwUpdateDb) {
+            const dbDate = new Date(lastPwUpdateDb).getTime();
+            const tokenDate = new Date(user.lastPwUpdate || 0).getTime();
+            if (dbDate > tokenDate) {
+                return res.status(401).json({
+                    success: false,
+                    message: 'Session expired. Please log in again.',
+                });
+            }
+        }
+
+        const newAccessToken = jwt.sign(
+            { _id: user._id, lastPwUpdate: lastPwUpdateDb || user.lastPwUpdate || null },
+            process.env.JWT_SECRET,
+            { expiresIn: '30m' }
+        );
+
+        const newRefreshToken = jwt.sign(
+            { _id: user._id, lastPwUpdate: lastPwUpdateDb || user.lastPwUpdate || null },
+            process.env.JWT_REFRESH_SECRET,
+            { expiresIn: '7d' }
+        );
 
         res.cookie(`jwt_${type}`, newAccessToken, {
             httpOnly: true,
+            maxAge: 1800000,
             secure: process.env.ENVIRONMENT === 'prod',
             sameSite: process.env.ENVIRONMENT === 'prod' ? 'None' : 'Lax',
         });

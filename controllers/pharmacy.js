@@ -28,11 +28,22 @@ const loginPharma = async (req, res) => {
         const isMatch = await bcrypt.compare(password, hashedPassword);
         if (!isMatch) return res.status(401).json({ success: false, message: 'Invalid credentials' });
 
-        const refreshTokenExpiresIn = req.body.stayLoggedIn ? '30d' : '1d';
-        const refreshTokenMaxAge = stayLoggedIn ? 2592000000 : null;
+        let lastPwUpdate = pharma.last_password_update_utc?.S;
+        if (!lastPwUpdate) {
+            lastPwUpdate = new Date().toISOString();
+            const updateCmd = new UpdateItemCommand({
+                TableName: 'Pharmacy',
+                Key: { id: { S: pharma.id.S } },
+                UpdateExpression: 'SET last_password_update_utc = :now',
+                ExpressionAttributeValues: { ':now': { S: lastPwUpdate } },
+            });
+            await client.send(updateCmd);
+        }
+        const refreshTokenExpiresIn = stayLoggedIn ? '30d' : '1d';
+        const refreshTokenMaxAge = stayLoggedIn ? 2592000000 : 86400000;
 
-        const token = jwt.sign({ _id: pharma.id.S }, process.env.JWT_SECRET, { expiresIn: '30m' });
-        const refreshToken = jwt.sign({ _id: pharma.id.S }, process.env.JWT_REFRESH_SECRET, {
+        const token = jwt.sign({ _id: pharma.id.S, lastPwUpdate }, process.env.JWT_SECRET, { expiresIn: '30m' });
+        const refreshToken = jwt.sign({ _id: pharma.id.S, lastPwUpdate }, process.env.JWT_REFRESH_SECRET, {
             expiresIn: refreshTokenExpiresIn,
         });
 
