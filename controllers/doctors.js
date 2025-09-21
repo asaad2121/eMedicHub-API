@@ -5,6 +5,7 @@ const {
     ScanCommand,
     PutItemCommand,
     GetItemCommand,
+    UpdateItemCommand,
 } = require('@aws-sdk/client-dynamodb');
 const { IdTypes, BloodGroups, AgeRanges } = require('./utils/constants');
 const { differenceInYears, parseISO } = require('date-fns');
@@ -20,33 +21,40 @@ const loginDoctors = async (req, res) => {
             TableName: 'Doctors',
             IndexName: 'email-index',
             KeyConditionExpression: 'email = :email',
-            ExpressionAttributeValues: {
-                ':email': { S: email },
-            },
+            ExpressionAttributeValues: { ':email': { S: email } },
         });
 
         const response = await client.send(command);
         const doctor = response.Items?.[0];
 
-        if (!doctor) {
-            return res.status(404).json({ success: false, message: 'Doctor not found' });
-        }
+        if (!doctor) return res.status(404).json({ success: false, message: 'Doctor not found' });
 
         const isMatch = await verifyPassword(password, doctor.password.S);
-        if (!isMatch) {
-            return res.status(401).json({ success: false, message: 'Invalid credentials' });
+        if (!isMatch) return res.status(401).json({ success: false, message: 'Invalid credentials' });
+
+        let lastPwUpdate = doctor.last_password_update_utc?.S;
+        if (!lastPwUpdate) {
+            lastPwUpdate = new Date().toISOString();
+            const updateCmd = new UpdateItemCommand({
+                TableName: 'Doctors',
+                Key: { id: { S: doctor.id.S } },
+                UpdateExpression: 'SET last_password_update_utc = :now',
+                ExpressionAttributeValues: { ':now': { S: lastPwUpdate } },
+            });
+            await client.send(updateCmd);
         }
 
-        const refreshTokenExpiresIn = req.body.stayLoggedIn ? '30d' : '1d';
-        const refreshTokenMaxAge = stayLoggedIn ? 2592000000 : null;
+        const refreshTokenExpiresIn = stayLoggedIn ? '30d' : '1d';
+        const refreshTokenMaxAge = stayLoggedIn ? 2592000000 : 86400000;
 
-        const token = jwt.sign({ _id: doctor.id.S }, process.env.JWT_SECRET, { expiresIn: '30m' });
-        const refreshToken = jwt.sign({ _id: doctor.id.S }, process.env.JWT_REFRESH_SECRET, {
+        const token = jwt.sign({ _id: doctor.id.S, lastPwUpdate }, process.env.JWT_SECRET, { expiresIn: '30m' });
+        const refreshToken = jwt.sign({ _id: doctor.id.S, lastPwUpdate }, process.env.JWT_REFRESH_SECRET, {
             expiresIn: refreshTokenExpiresIn,
         });
 
         res.cookie('jwt_doctor', token, {
             httpOnly: true,
+            maxAge: 1800000,
             secure: process.env.ENVIRONMENT === 'prod',
             sameSite: process.env.ENVIRONMENT === 'prod' ? 'None' : 'Lax',
         });
@@ -73,7 +81,7 @@ const loginDoctors = async (req, res) => {
             data: userData,
         });
     } catch (err) {
-        console.error('Login error:', err);
+        console.error('Doctor login error:', err);
         return res.status(500).json({ success: false, message: 'Internal server error' });
     }
 };
