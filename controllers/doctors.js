@@ -339,7 +339,6 @@ const viewPatients = async (req, res) => {
         }
 
         if (start || end) {
-
             const patientIds = mappedPatients.map((p) => p.id);
 
             if (patientIds?.length > 0) {

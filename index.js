@@ -7,25 +7,35 @@ const patientsRouter = require('./routes/patients');
 const doctorsRouter = require('./routes/doctors');
 const pharmaRouter = require('./routes/pharmacy');
 const ordersRouter = require('./routes/orders');
-const csrf = require('csurf');
+const { csrfSync } = require('csrf-sync');
+const session = require('express-session');
 const { refreshLimiter } = require('./controllers/utils/functions');
-
-const csrfProtection = csrf({ cookie: true });
 
 const app = express();
 
 app.use(bodyParser.json());
 app.use(cookieParser());
-app.use(csrfProtection);
 
-// CSRF error handler to prevent process crash
+app.use(
+    session({
+        secret: process.env.SESSION_SECRET,
+        resave: false,
+        saveUninitialized: true,
+        cookie: { secure: process.env.NODE_ENV === 'production' },
+    })
+);
+
+const { csrfSynchronisedProtection, generateToken } = csrfSync();
+
+app.get('/csrf-token', refreshLimiter, (req, res) => {
+    res.json({ csrfToken: generateToken(req, true) });
+});
+
+app.use(csrfSynchronisedProtection);
+
 app.use((err, req, res, next) => {
     if (err.code !== 'EBADCSRFTOKEN') return next(err);
     res.status(403).json({ success: false, message: 'Invalid CSRF token' });
-});
-
-app.get('/csrf-token', refreshLimiter, (req, res) => {
-    res.json({ csrfToken: req.csrfToken() });
 });
 
 const allowedOrigins = [process.env.ANGULAR_APP_URL, process.env.ANGULAR_APP_WEB_URL];
