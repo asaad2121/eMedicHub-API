@@ -236,7 +236,14 @@ const viewPatients = async (req, res) => {
         const expressionAttributeValues = {};
         const expressionAttributeNames = {};
 
-        if (searchPatient && searchPatient?.length >= 2) {
+        let normalizedSearch = '';
+        if (typeof searchPatient === 'string') {
+            normalizedSearch = searchPatient.trim();
+        } else if (Array.isArray(searchPatient)) {
+            normalizedSearch = searchPatient[0]?.trim() ?? '';
+        }
+
+        if (normalizedSearch.length >= 2) {
             filterExpression += '(contains(#fn, :search) OR contains(#ln, :search))';
             const capitalizedSearch = normalizedSearch.charAt(0).toUpperCase() + normalizedSearch.slice(1);
             expressionAttributeValues[':search'] = { S: capitalizedSearch };
