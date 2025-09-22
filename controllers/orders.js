@@ -141,7 +141,7 @@ const getOrders = async (req, res) => {
             return res.status(400).json({ success: false, message: 'pharma_id is required for type=pharma' });
 
         let patientIdsFromSearch = [];
-        if (patientSearch && patientSearch?.length >= 3) {
+        if (typeof patientSearch === 'string' && patientSearch.trim().length >= 3) {
             const capitalizedSearch = patientSearch?.charAt(0)?.toUpperCase() + patientSearch?.slice(1);
             const patientScan = new ScanCommand({
                 TableName: 'Patients',
