@@ -238,7 +238,7 @@ const viewPatients = async (req, res) => {
 
         if (searchPatient && searchPatient?.length >= 2) {
             filterExpression += '(contains(#fn, :search) OR contains(#ln, :search))';
-            const capitalizedSearch = searchPatient?.charAt(0)?.toUpperCase() + searchPatient?.slice(1);
+            const capitalizedSearch = normalizedSearch.charAt(0).toUpperCase() + normalizedSearch.slice(1);
             expressionAttributeValues[':search'] = { S: capitalizedSearch };
             expressionAttributeNames['#fn'] = 'first_name';
             expressionAttributeNames['#ln'] = 'last_name';
