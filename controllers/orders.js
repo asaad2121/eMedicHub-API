@@ -21,7 +21,8 @@ const searchMedicines = async (req, res) => {
         });
     }
 
-    if (!name || name?.length < 4) {
+    const safeName = name.trim();
+    if (safeName.length < 4) {
         return res.status(400).json({
             success: false,
             message: 'Search term must be at least 4 characters',
@@ -29,7 +30,6 @@ const searchMedicines = async (req, res) => {
     }
 
     try {
-        const safeName = name.trim();
         const capitalizedName = safeName.charAt(0).toUpperCase() + safeName.slice(1);
         const command = new ScanCommand({
             TableName: 'Medicines',
