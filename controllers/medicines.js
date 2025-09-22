@@ -3,7 +3,7 @@ const { DynamoDBClient, ScanCommand } = require('@aws-sdk/client-dynamodb');
 const client = new DynamoDBClient({ region: process.env.AWS_REGION });
 
 const getMedsByName = async (req, res) => {
-    const { name } = req.query;
+    const { name } = req.body;
 
     if (typeof name !== 'string') {
         return res.status(400).json({

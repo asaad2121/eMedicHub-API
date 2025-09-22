@@ -225,7 +225,7 @@ const viewPatients = async (req, res) => {
             limit = 10,
             currentPageNo = 1,
             doctor_id,
-        } = req.query;
+        } = req.body;
 
         let start, end;
         if (lastAppointmentStart) {

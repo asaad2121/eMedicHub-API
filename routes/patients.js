@@ -12,7 +12,7 @@ const { authenticateToken, authenticateRefreshToken } = require('../middleware/s
 const { getAllDoctors, addNewPatientPost, addNewPatientGet } = require('../controllers/doctors');
 const { getUserProfile, resetPassword } = require('../controllers/userInfo');
 
-router.get('/getUserProfile/:id', (req, res, next) => authenticateToken('patient', req, res, next), getUserProfile);
+router.post('/getUserProfile/:id', (req, res, next) => authenticateToken('patient', req, res, next), getUserProfile);
 router.post(
     '/resetPassword',
     [
@@ -34,19 +34,19 @@ router.post(
     resetPassword
 );
 
-router.get('/getDoctors', (req, res, next) => authenticateToken('patient', req, res, next), getAllDoctors);
-router.get(
+router.post('/getDoctors', (req, res, next) => authenticateToken('patient', req, res, next), getAllDoctors);
+router.post(
     '/viewAppointments',
-    (req, res, next) => authenticateToken(req.query.type, req, res, next),
+    (req, res, next) => authenticateToken(req.body.type, req, res, next),
     viewAppointments
 );
-router.get(
+router.post(
     '/viewAppointmentData',
     (req, res, next) => authenticateToken('patient', req, res, next),
     viewAppointmentData
 );
 
-router.get(
+router.post(
     '/checkDoctorAvailability',
     [check('doctor_id', 'doctor id cannot be empty').notEmpty(), check('date', 'date is required').notEmpty()],
     (req, res, next) => {
@@ -143,9 +143,9 @@ router.post(
     },
     addNewPatientPost
 );
-router.get('/signup', addNewPatientGet);
+router.post('/signup', addNewPatientGet);
 
-router.get('/logout', (req, res) => {
+router.post('/logout', (req, res) => {
     res.clearCookie('jwt_patient');
     return res.json({ success: true, message: 'Signout success!' });
 });

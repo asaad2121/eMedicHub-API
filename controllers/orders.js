@@ -12,7 +12,7 @@ const { OrderStatus } = require('./utils/constants');
 const client = new DynamoDBClient({ region: process.env.AWS_REGION });
 
 const searchMedicines = async (req, res) => {
-    const { name } = req.query;
+    const { name } = req.body;
 
     if (typeof name !== 'string') {
         return res.status(400).json({
@@ -137,7 +137,7 @@ const createNewOrder = async (req, res) => {
 
 const getOrders = async (req, res) => {
     try {
-        const { limit = 10, currentPageNo = 1, doctor_id, patient_id, pharma_id, type, patientSearch } = req.query;
+        const { limit = 10, currentPageNo = 1, doctor_id, patient_id, pharma_id, type, patientSearch } = req.body;
         const pageSize = parseInt(limit);
         const pageNo = parseInt(currentPageNo);
 

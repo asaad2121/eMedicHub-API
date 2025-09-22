@@ -6,7 +6,7 @@ const { authenticateToken, authenticateRefreshToken } = require('../middleware/s
 const { viewAppointments, viewAppointmentData } = require('../controllers/patients');
 const { getUserProfile, resetPassword } = require('../controllers/userInfo');
 
-router.get('/getUserProfile/:id', (req, res, next) => authenticateToken('doctor', req, res, next), getUserProfile);
+router.post('/getUserProfile/:id', (req, res, next) => authenticateToken('doctor', req, res, next), getUserProfile);
 
 router.post(
     '/resetPassword',
@@ -53,23 +53,23 @@ router.post(
     loginDoctors
 );
 
-router.get('/logout', (req, res) => {
+router.post('/logout', (req, res) => {
     res.clearCookie('jwt_doctor');
     return res.json({ success: true, message: 'Signout success!' });
 });
 
 router.post('/auth/refresh', authenticateRefreshToken('doctor'));
 
-router.get('/addNewPatient', (req, res, next) => authenticateToken('doctor', req, res, next), addNewPatientGet);
-router.get(
+router.post('/addNewPatient', (req, res, next) => authenticateToken('doctor', req, res, next), addNewPatientGet);
+router.post(
     '/viewAppointments',
-    (req, res, next) => authenticateToken(req.query.type, req, res, next),
+    (req, res, next) => authenticateToken(req.body.type, req, res, next),
     viewAppointments
 );
-router.get('/viewPatients', (req, res, next) => authenticateToken('doctor', req, res, next), viewPatients);
-router.get(
+router.post('/viewPatients', (req, res, next) => authenticateToken('doctor', req, res, next), viewPatients);
+router.post(
     '/viewAppointmentData',
-    (req, res, next) => authenticateToken(req.query.type, req, res, next),
+    (req, res, next) => authenticateToken(req.body.type, req, res, next),
     viewAppointmentData
 );
 
@@ -109,6 +109,6 @@ router.post(
     addNewPatientPost
 );
 
-// router.get('/getDoctors', getAllDoctors);
+// router.post('/getDoctors', getAllDoctors);
 
 module.exports = router;
