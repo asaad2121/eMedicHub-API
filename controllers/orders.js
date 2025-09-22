@@ -142,7 +142,8 @@ const getOrders = async (req, res) => {
 
         let patientIdsFromSearch = [];
         if (typeof patientSearch === 'string' && patientSearch.trim().length >= 3) {
-            const capitalizedSearch = patientSearch?.charAt(0)?.toUpperCase() + patientSearch?.slice(1);
+            const searchStr = patientSearch.trim();
+            const capitalizedSearch = searchStr.charAt(0).toUpperCase() + searchStr.slice(1);
             const patientScan = new ScanCommand({
                 TableName: 'Patients',
                 FilterExpression: 'contains(#fn, :search) OR contains(#ln, :search)',
