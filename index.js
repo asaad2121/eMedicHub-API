@@ -7,6 +7,7 @@ const patientsRouter = require('./routes/patients');
 const doctorsRouter = require('./routes/doctors');
 const pharmaRouter = require('./routes/pharmacy');
 const ordersRouter = require('./routes/orders');
+const { refreshLimiter } = require('./controllers/utils/functions');
 
 const app = express();
 
@@ -24,10 +25,10 @@ app.use(
     })
 );
 
-app.use('/patients', patientsRouter);
-app.use('/doctors', doctorsRouter);
-app.use('/pharma', pharmaRouter);
-app.use('/orders', ordersRouter);
+app.use('/patients', refreshLimiter, patientsRouter);
+app.use('/doctors', refreshLimiter, doctorsRouter);
+app.use('/pharma', refreshLimiter, pharmaRouter);
+app.use('/orders', refreshLimiter, ordersRouter);
 
 app.get('/', (req, res) => res.status(200).send('OK'));
 

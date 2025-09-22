@@ -2,6 +2,16 @@ const bcrypt = require('bcryptjs');
 const { UpdateItemCommand, DynamoDBClient } = require('@aws-sdk/client-dynamodb');
 const client = new DynamoDBClient({ region: process.env.AWS_REGION });
 
+const rateLimit = require('express-rate-limit');
+
+const refreshLimiter = rateLimit({
+    windowMs: 1 * 60 * 1000,
+    max: 5,
+    message: { success: false, message: 'Too many refresh attempts, please try again later' },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+
 const generateHashedPassword = async (password) => {
     const saltRounds = 10;
     const salt = await bcrypt.genSalt(saltRounds);
@@ -112,4 +122,5 @@ module.exports = {
     getDayOfWeek,
     getAvailableSlots,
     mapDynamoDBOrders,
+    refreshLimiter,
 };
