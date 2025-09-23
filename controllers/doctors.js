@@ -225,7 +225,18 @@ const viewPatients = async (req, res) => {
             limit = 10,
             currentPageNo = 1,
             doctor_id,
-        } = req.query;
+        } = req.body;
+
+        let start, end;
+        if (lastAppointmentStart) {
+            start = parseISO(lastAppointmentStart);
+            if (isNaN(start.getTime())) return res.status(400).json({ success: false, message: 'Invalid start date' });
+        } else start = new Date('1900-01-01');
+
+        if (lastAppointmentEnd) {
+            end = parseISO(lastAppointmentEnd);
+            if (isNaN(end.getTime())) return res.status(400).json({ success: false, message: 'Invalid end date' });
+        } else end = new Date();
 
         if (!doctor_id) return res.status(400).json({ success: false, message: 'doctor_id is required' });
 
@@ -236,9 +247,16 @@ const viewPatients = async (req, res) => {
         const expressionAttributeValues = {};
         const expressionAttributeNames = {};
 
-        if (searchPatient && searchPatient?.length >= 2) {
+        let normalizedSearch = '';
+        if (typeof searchPatient === 'string') {
+            normalizedSearch = searchPatient.trim();
+        } else if (Array.isArray(searchPatient)) {
+            normalizedSearch = searchPatient[0]?.trim() ?? '';
+        }
+
+        if (normalizedSearch.length >= 2) {
             filterExpression += '(contains(#fn, :search) OR contains(#ln, :search))';
-            const capitalizedSearch = searchPatient?.charAt(0)?.toUpperCase() + searchPatient?.slice(1);
+            const capitalizedSearch = normalizedSearch.charAt(0).toUpperCase() + normalizedSearch.slice(1);
             expressionAttributeValues[':search'] = { S: capitalizedSearch };
             expressionAttributeNames['#fn'] = 'first_name';
             expressionAttributeNames['#ln'] = 'last_name';
@@ -320,10 +338,7 @@ const viewPatients = async (req, res) => {
             mappedPatients = mappedPatients.filter((p) => p.age !== null && p.age >= minAge && p.age <= maxAge);
         }
 
-        if (lastAppointmentStart || lastAppointmentEnd) {
-            const start = lastAppointmentStart ? parseISO(lastAppointmentStart) : new Date('1900-01-01');
-            const end = lastAppointmentEnd ? parseISO(lastAppointmentEnd) : new Date();
-
+        if (start || end) {
             const patientIds = mappedPatients.map((p) => p.id);
 
             if (patientIds?.length > 0) {
@@ -358,7 +373,7 @@ const viewPatients = async (req, res) => {
             }
         }
 
-        if (!searchPatient && !ageRange && !bloodGrp && !lastAppointmentStart && !lastAppointmentEnd) {
+        if (!searchPatient && !ageRange && !bloodGrp && !start && !end) {
             mappedPatients.sort((a, b) => b.id.localeCompare(a.id));
         }
 

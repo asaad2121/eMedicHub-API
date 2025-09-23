@@ -11,8 +11,9 @@ const { check, validationResult } = require('express-validator');
 const { authenticateToken, authenticateRefreshToken } = require('../middleware/session-authentication-middleware');
 const { viewAppointments, viewAppointmentData } = require('../controllers/patients');
 const { getUserProfile, resetPassword } = require('../controllers/userInfo');
+const { refreshLimiter } = require('../controllers/utils/functions');
 
-router.get('/getUserProfile/:id', (req, res, next) => authenticateToken('doctor', req, res, next), getUserProfile);
+router.post('/getUserProfile/:id', (req, res, next) => authenticateToken('doctor', req, res, next), getUserProfile);
 
 router.post(
     '/resetPassword',
@@ -59,23 +60,23 @@ router.post(
     loginDoctors
 );
 
-router.get('/logout', (req, res) => {
+router.post('/logout', (req, res) => {
     res.clearCookie('jwt_doctor');
     return res.json({ success: true, message: 'Signout success!' });
 });
 
-router.post('/auth/refresh', authenticateRefreshToken('doctor'));
+router.post('/auth/refresh', refreshLimiter, authenticateRefreshToken('doctor'));
 
-router.get('/addNewPatient', (req, res, next) => authenticateToken('doctor', req, res, next), addNewPatientGet);
-router.get(
+router.post('/addNewPatientInfo', (req, res, next) => authenticateToken('doctor', req, res, next), addNewPatientGet);
+router.post(
     '/viewAppointments',
-    (req, res, next) => authenticateToken(req.query.type, req, res, next),
+    (req, res, next) => authenticateToken(req.body.type, req, res, next),
     viewAppointments
 );
-router.get('/viewPatients', (req, res, next) => authenticateToken('doctor', req, res, next), viewPatients);
-router.get(
+router.post('/viewPatients', (req, res, next) => authenticateToken('doctor', req, res, next), viewPatients);
+router.post(
     '/viewAppointmentData',
-    (req, res, next) => authenticateToken(req.query.type, req, res, next),
+    (req, res, next) => authenticateToken(req.body.type, req, res, next),
     viewAppointmentData
 );
 

@@ -18,7 +18,7 @@ const client = new DynamoDBClient({ region: process.env.AWS_REGION });
 
 const checkDoctorAvailability = async (req, res) => {
     try {
-        const { doctor_id, date } = req.query;
+        const { doctor_id, date } = req.body;
         const { workingHours, appointments } = await fetchDoctorAppointments(doctor_id, date);
         const freeSlots = getAvailableSlots(workingHours, appointments);
         return res.status(200).json({ success: true, data: freeSlots });
@@ -165,7 +165,7 @@ const loginPatients = async (req, res) => {
 
 const viewAppointments = async (req, res) => {
     try {
-        const { type, doctor_id, patient_id, start_date, end_date, limit = 10, currentPageNo = 1 } = req.query;
+        const { type, doctor_id, patient_id, start_date, end_date, limit = 10, currentPageNo = 1 } = req.body;
         const pageSize = parseInt(limit);
         const pageNo = parseInt(currentPageNo);
 
@@ -287,7 +287,7 @@ const viewAppointments = async (req, res) => {
 
 const viewAppointmentData = async (req, res) => {
     try {
-        const { appointment_id, type } = req.query;
+        const { appointment_id, type } = req.body;
 
         if (!appointment_id) return res.status(400).json({ success: false, message: 'appointment_id is required' });
         if (!['doctor', 'patient'].includes(type))

@@ -4,9 +4,9 @@ const { searchMedicines, createNewOrder, getAllPharmacy, getOrders } = require('
 const { authenticateToken } = require('../middleware/session-authentication-middleware');
 const { check, validationResult } = require('express-validator');
 
-router.get('/searchMedicines', (req, res, next) => authenticateToken('doctor', req, res, next), searchMedicines);
-router.get('/getPharmacy', (req, res, next) => authenticateToken('doctor', req, res, next), getAllPharmacy);
-router.get('/getOrders', (req, res, next) => authenticateToken(req.query.type, req, res, next), getOrders);
+router.post('/searchMedicines', (req, res, next) => authenticateToken('doctor', req, res, next), searchMedicines);
+router.post('/getPharmacy', (req, res, next) => authenticateToken('doctor', req, res, next), getAllPharmacy);
+router.post('/getOrders', (req, res, next) => authenticateToken(req.body.type, req, res, next), getOrders);
 
 router.post(
     '/createNewOrder',
