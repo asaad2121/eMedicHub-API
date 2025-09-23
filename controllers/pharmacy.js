@@ -1,4 +1,11 @@
-const { QueryCommand, DynamoDBClient, GetItemCommand, UpdateItemCommand } = require('@aws-sdk/client-dynamodb');
+const {
+    QueryCommand,
+    DynamoDBClient,
+    GetItemCommand,
+    UpdateItemCommand,
+    BatchGetItemCommand,
+    ScanCommand,
+} = require('@aws-sdk/client-dynamodb');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { OrderStatus } = require('./utils/constants');
@@ -135,7 +142,77 @@ const updateOrderStatus = async (req, res) => {
     }
 };
 
+const getPharmacyDashboard = async (req, res) => {
+    try {
+        const { pharma_id } = req.body;
+
+        if (!pharma_id) return res.status(400).json({ success: false, message: 'pharma_id is required' });
+
+        let orders = [];
+        let lastEvaluatedKey = null;
+        do {
+            const scanCommand = new ScanCommand({
+                TableName: 'Orders',
+                FilterExpression: 'pharma_id = :phId',
+                ExpressionAttributeValues: { ':phId': { S: pharma_id } },
+                ExclusiveStartKey: lastEvaluatedKey,
+            });
+
+            const scanResult = await client.send(scanCommand);
+            orders.push(...(scanResult.Items || []));
+            lastEvaluatedKey = scanResult.LastEvaluatedKey;
+        } while (lastEvaluatedKey);
+
+        orders.sort((a, b) => new Date(b.time.S) - new Date(a.time.S));
+        const latestOrders = orders.slice(0, 3);
+
+        const doctorIds = [...new Set(latestOrders.map((o) => o?.doctor_id?.S))];
+        const patientIds = [...new Set(latestOrders.map((o) => o?.patient_id?.S))];
+
+        const requestItems = {};
+        if (doctorIds.length > 0) requestItems.Doctors = { Keys: doctorIds.map((id) => ({ id: { S: id } })) };
+        if (patientIds.length > 0) requestItems.Patients = { Keys: patientIds.map((id) => ({ id: { S: id } })) };
+
+        let batchResult = { Responses: {} };
+        if (Object.keys(requestItems).length > 0) {
+            const batchGetCommand = new BatchGetItemCommand({ RequestItems: requestItems });
+            batchResult = await client.send(batchGetCommand);
+        }
+
+        const doctorMap = Object.fromEntries(
+            (batchResult.Responses?.Doctors || []).map((d) => [
+                d.id.S,
+                `${d.first_name?.S || ''} ${d.last_name?.S || ''}`.trim(),
+            ])
+        );
+        const patientMap = Object.fromEntries(
+            (batchResult.Responses?.Patients || []).map((p) => [
+                p.id.S,
+                `${p.first_name?.S || ''} ${p.last_name?.S || ''}`.trim(),
+            ])
+        );
+
+        const enrichedOrders = latestOrders.map((o) => ({
+            order_id: o.id.S,
+            doctor_name: doctorMap[o.doctor_id.S] || null,
+            patient_name: patientMap[o.patient_id.S] || null,
+            order_status: o.status.S,
+            order_time: o.time.S,
+        }));
+
+        res.status(200).json({
+            success: true,
+            totalOrders: enrichedOrders.length,
+            data: enrichedOrders,
+        });
+    } catch (err) {
+        console.error('Error fetching latest orders:', err);
+        res.status(500).json({ success: false, message: 'Internal server error', error: err.message });
+    }
+};
+
 module.exports = {
     loginPharma,
     updateOrderStatus,
+    getPharmacyDashboard,
 };

@@ -6,6 +6,7 @@ const {
     createNewAppointment,
     viewAppointments,
     viewAppointmentData,
+    getPatientDashboard,
 } = require('../controllers/patients');
 const { check, validationResult } = require('express-validator');
 const { authenticateToken, authenticateRefreshToken } = require('../middleware/session-authentication-middleware');
@@ -145,6 +146,12 @@ router.post(
     addNewPatientPost
 );
 router.post('/signupInfo', addNewPatientGet);
+
+router.post(
+    '/getPatientDashboard',
+    (req, res, next) => authenticateToken('patient', req, res, next),
+    getPatientDashboard
+);
 
 router.post('/logout', (req, res) => {
     res.clearCookie('jwt_patient');
