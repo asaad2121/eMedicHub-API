@@ -6,7 +6,7 @@ const rateLimit = require('express-rate-limit');
 
 const refreshLimiter = rateLimit({
     windowMs: 1 * 60 * 1000,
-    max: 15,
+    max: process.env.ENVIRONMENT === 'dev' ? 30 : 15,
     message: { success: false, message: 'Too many refresh attempts, please try again later' },
     standardHeaders: true,
     legacyHeaders: false,
