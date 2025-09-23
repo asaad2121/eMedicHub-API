@@ -357,10 +357,88 @@ const viewAppointmentData = async (req, res) => {
     }
 };
 
+const getPatientDashboard = async (req, res) => {
+    try {
+        const { patient_id } = req.body;
+
+        if (!patient_id) return res.status(400).json({ success: false, message: 'patient_id is required' });
+
+        const appointmentScan = new ScanCommand({
+            TableName: 'Appointments',
+            FilterExpression: 'patient_id = :patId AND #time >= :now',
+            ExpressionAttributeValues: {
+                ':patId': { S: patient_id },
+                ':now': { S: new Date().toISOString() },
+            },
+            ExpressionAttributeNames: {
+                '#time': 'time',
+            },
+        });
+
+        const appointmentResult = await client.send(appointmentScan);
+        const appointments = (appointmentResult.Items || [])
+            .map((a) => ({
+                id: a.id.S,
+                doctor_id: a.doctor_id.S,
+                time: a.time.S,
+                notes: a.notes?.S || '',
+            }))
+            .sort((a, b) => new Date(a.time) - new Date(b.time))
+            .slice(0, 3);
+
+        const ordersScan = new ScanCommand({
+            TableName: 'Orders',
+            FilterExpression: 'patient_id = :patId AND #status <> :collected',
+            ExpressionAttributeValues: {
+                ':patId': { S: patient_id },
+                ':collected': { S: 'Collected' },
+            },
+            ExpressionAttributeNames: {
+                '#status': 'status',
+            },
+        });
+
+        const ordersResult = await client.send(ordersScan);
+        const orders = ordersResult.Items || [];
+
+        const ordersReady = [];
+        const ordersNotReady = [];
+
+        orders.forEach((o) => {
+            const orderObj = {
+                order_id: o.id.S,
+                appointment_id: o.appointment_id?.S,
+                doctor_id: o.doctor_id?.S,
+                pharma_id: o.pharma_id?.S,
+                status: o.status.S,
+                time: o.time.S,
+            };
+
+            if (o.status.S === 'Ready' && ordersReady.length < 3) {
+                ordersReady.push(orderObj);
+            } else if (ordersNotReady.length < 3) {
+                ordersNotReady.push(orderObj);
+            }
+        });
+
+        return res.status(200).json({
+            success: true,
+            patient_id,
+            appointments,
+            ordersReady,
+            ordersNotReady,
+        });
+    } catch (err) {
+        console.error('Error fetching patient dashboard:', err);
+        return res.status(500).json({ success: false, message: 'Internal server error', error: err.message });
+    }
+};
+
 module.exports = {
     loginPatients,
     checkDoctorAvailability,
     createNewAppointment,
     viewAppointments,
     viewAppointmentData,
+    getPatientDashboard,
 };

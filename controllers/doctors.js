@@ -8,7 +8,7 @@ const {
     UpdateItemCommand,
 } = require('@aws-sdk/client-dynamodb');
 const { IdTypes, BloodGroups, AgeRanges } = require('./utils/constants');
-const { differenceInYears, parseISO } = require('date-fns');
+const { differenceInYears, parseISO, format } = require('date-fns');
 const { verifyPassword, generateHashedPassword, getNextId } = require('./utils/functions');
 
 const client = new DynamoDBClient({ region: process.env.AWS_REGION });
@@ -378,10 +378,68 @@ const viewPatients = async (req, res) => {
     }
 };
 
+const getDoctorAppointmentsDashboard = async (req, res) => {
+    try {
+        const { doctor_id } = req.body;
+
+        if (!doctor_id) return res.status(400).json({ success: false, message: 'doctor_id is required' });
+
+        const today = format(new Date(), 'yyyy-MM-dd');
+
+        const scanCommand = new ScanCommand({
+            TableName: 'Appointments',
+            FilterExpression: 'doctor_id = :docId AND #date = :today',
+            ExpressionAttributeValues: {
+                ':docId': { S: doctor_id },
+                ':today': { S: today },
+            },
+            ExpressionAttributeNames: {
+                '#date': 'date',
+            },
+        });
+
+        const scanResult = await client.send(scanCommand);
+        const appointments = scanResult.Items || [];
+
+        const todayAppointments = appointments.filter((a) => {
+            const apptDate = new Date(a.date?.S).toISOString().split('T')[0];
+            const todayDate = new Date().toISOString().split('T')[0];
+            return apptDate === todayDate;
+        });
+
+        const { completed, upcoming } = appointments.reduce(
+            (acc, a) => {
+                if (a.status?.S === 'Completed') acc.completed++;
+                else acc.upcoming++;
+                return acc;
+            },
+            { completed: 0, upcoming: 0 }
+        );
+
+        const totalToday = todayAppointments?.length;
+
+        const topAppointments = todayAppointments.slice(0, 3);
+
+        return res.status(200).json({
+            success: true,
+            data: {
+                totalToday,
+                completed,
+                upcoming,
+                appointments: topAppointments,
+            },
+        });
+    } catch (err) {
+        console.error('Error fetching doctor dashboard:', err);
+        return res.status(500).json({ success: false, message: 'Internal server error', error: err.message });
+    }
+};
+
 module.exports = {
     loginDoctors,
     getAllDoctors,
     addNewPatientPost,
     addNewPatientGet,
     viewPatients,
+    getDoctorAppointmentsDashboard,
 };
