@@ -143,7 +143,7 @@ router.post(
     },
     addNewPatientPost
 );
-router.post('/signup', addNewPatientGet);
+router.post('/signupInfo', addNewPatientGet);
 
 router.post('/logout', (req, res) => {
     res.clearCookie('jwt_patient');

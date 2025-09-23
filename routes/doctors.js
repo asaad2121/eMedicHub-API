@@ -60,7 +60,7 @@ router.post('/logout', (req, res) => {
 
 router.post('/auth/refresh', authenticateRefreshToken('doctor'));
 
-router.post('/addNewPatient', (req, res, next) => authenticateToken('doctor', req, res, next), addNewPatientGet);
+router.post('/addNewPatientInfo', (req, res, next) => authenticateToken('doctor', req, res, next), addNewPatientGet);
 router.post(
     '/viewAppointments',
     (req, res, next) => authenticateToken(req.body.type, req, res, next),
