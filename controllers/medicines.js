@@ -3,9 +3,17 @@ const { DynamoDBClient, ScanCommand } = require('@aws-sdk/client-dynamodb');
 const client = new DynamoDBClient({ region: process.env.AWS_REGION });
 
 const getMedsByName = async (req, res) => {
-    const { name } = req.query;
+    const { name } = req.body;
 
-    if (!name || name?.length < 4) {
+    if (typeof name !== 'string') {
+        return res.status(400).json({
+            success: false,
+            message: 'Search term must be a string',
+        });
+    }
+
+    const safeName = name.trim();
+    if (safeName.length < 4) {
         return res.status(400).json({
             success: false,
             message: 'Search term must be at least 4 characters',
@@ -13,7 +21,7 @@ const getMedsByName = async (req, res) => {
     }
 
     try {
-        const capitalizedName = name?.charAt(0)?.toUpperCase() + name?.slice(1);
+        const capitalizedName = safeName.charAt(0).toUpperCase() + safeName.slice(1);
         const command = new ScanCommand({
             TableName: 'Medicines',
             FilterExpression: 'contains(#nm, :name)',

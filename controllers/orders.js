@@ -12,9 +12,17 @@ const { OrderStatus } = require('./utils/constants');
 const client = new DynamoDBClient({ region: process.env.AWS_REGION });
 
 const searchMedicines = async (req, res) => {
-    const { name } = req.query;
+    const { name } = req.body;
 
-    if (!name || name?.length < 4) {
+    if (typeof name !== 'string') {
+        return res.status(400).json({
+            success: false,
+            message: 'Search term must be a string',
+        });
+    }
+
+    const safeName = name.trim();
+    if (safeName.length < 4) {
         return res.status(400).json({
             success: false,
             message: 'Search term must be at least 4 characters',
@@ -22,7 +30,7 @@ const searchMedicines = async (req, res) => {
     }
 
     try {
-        const capitalizedName = name?.charAt(0)?.toUpperCase() + name?.slice(1);
+        const capitalizedName = safeName.charAt(0).toUpperCase() + safeName.slice(1);
         const command = new ScanCommand({
             TableName: 'Medicines',
             FilterExpression: 'contains(#nm, :name)',
@@ -129,7 +137,7 @@ const createNewOrder = async (req, res) => {
 
 const getOrders = async (req, res) => {
     try {
-        const { limit = 10, currentPageNo = 1, doctor_id, patient_id, pharma_id, type, patientSearch } = req.query;
+        const { limit = 10, currentPageNo = 1, doctor_id, patient_id, pharma_id, type, patientSearch } = req.body;
         const pageSize = parseInt(limit);
         const pageNo = parseInt(currentPageNo);
 
@@ -141,8 +149,9 @@ const getOrders = async (req, res) => {
             return res.status(400).json({ success: false, message: 'pharma_id is required for type=pharma' });
 
         let patientIdsFromSearch = [];
-        if (patientSearch && patientSearch?.length >= 3) {
-            const capitalizedSearch = patientSearch?.charAt(0)?.toUpperCase() + patientSearch?.slice(1);
+        if (typeof patientSearch === 'string' && patientSearch.trim().length >= 3) {
+            const searchStr = patientSearch.trim();
+            const capitalizedSearch = searchStr.charAt(0).toUpperCase() + searchStr.slice(1);
             const patientScan = new ScanCommand({
                 TableName: 'Patients',
                 FilterExpression: 'contains(#fn, :search) OR contains(#ln, :search)',

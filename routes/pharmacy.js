@@ -4,8 +4,9 @@ const { loginPharma, updateOrderStatus } = require('../controllers/pharmacy.js')
 const { check, validationResult } = require('express-validator');
 const { authenticateToken, authenticateRefreshToken } = require('../middleware/session-authentication-middleware');
 const { getUserProfile, resetPassword } = require('../controllers/userInfo.js');
+const { refreshLimiter } = require('../controllers/utils/functions.js');
 
-router.get('/getUserProfile/:id', (req, res, next) => authenticateToken('pharma', req, res, next), getUserProfile);
+router.post('/getUserProfile/:id', (req, res, next) => authenticateToken('pharma', req, res, next), getUserProfile);
 router.post(
     '/resetPassword',
     [
@@ -53,11 +54,11 @@ router.post(
 
 router.post('/updateOrderStatus', (req, res, next) => authenticateToken('pharma', req, res, next), updateOrderStatus);
 
-router.get('/logout', (req, res) => {
+router.post('/logout', (req, res) => {
     res.clearCookie('jwt_pharma');
     return res.json({ success: true, message: 'Signout success!' });
 });
 
-router.post('/auth/refresh', authenticateRefreshToken('pharma'));
+router.post('/auth/refresh', refreshLimiter, authenticateRefreshToken('pharma'));
 
 module.exports = router;
