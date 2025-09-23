@@ -4,6 +4,7 @@ const { loginPharma, updateOrderStatus } = require('../controllers/pharmacy.js')
 const { check, validationResult } = require('express-validator');
 const { authenticateToken, authenticateRefreshToken } = require('../middleware/session-authentication-middleware');
 const { getUserProfile, resetPassword } = require('../controllers/userInfo.js');
+const { refreshLimiter } = require('../controllers/utils/functions.js');
 
 router.post('/getUserProfile/:id', (req, res, next) => authenticateToken('pharma', req, res, next), getUserProfile);
 router.post(
@@ -58,6 +59,6 @@ router.post('/logout', (req, res) => {
     return res.json({ success: true, message: 'Signout success!' });
 });
 
-router.post('/auth/refresh', authenticateRefreshToken('pharma'));
+router.post('/auth/refresh', refreshLimiter, authenticateRefreshToken('pharma'));
 
 module.exports = router;

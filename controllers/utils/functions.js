@@ -4,9 +4,17 @@ const client = new DynamoDBClient({ region: process.env.AWS_REGION });
 
 const rateLimit = require('express-rate-limit');
 
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 200,
+  message: { success: false, message: 'Too many requests, please try again later' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 const refreshLimiter = rateLimit({
     windowMs: 1 * 60 * 1000,
-    max: process.env.ENVIRONMENT === 'dev' ? 30 : 15,
+    max: 5,
     message: { success: false, message: 'Too many refresh attempts, please try again later' },
     standardHeaders: true,
     legacyHeaders: false,
@@ -123,4 +131,5 @@ module.exports = {
     getAvailableSlots,
     mapDynamoDBOrders,
     refreshLimiter,
+    apiLimiter,
 };

@@ -5,6 +5,7 @@ const { check, validationResult } = require('express-validator');
 const { authenticateToken, authenticateRefreshToken } = require('../middleware/session-authentication-middleware');
 const { viewAppointments, viewAppointmentData } = require('../controllers/patients');
 const { getUserProfile, resetPassword } = require('../controllers/userInfo');
+const { refreshLimiter } = require('../controllers/utils/functions');
 
 router.post('/getUserProfile/:id', (req, res, next) => authenticateToken('doctor', req, res, next), getUserProfile);
 
@@ -58,7 +59,7 @@ router.post('/logout', (req, res) => {
     return res.json({ success: true, message: 'Signout success!' });
 });
 
-router.post('/auth/refresh', authenticateRefreshToken('doctor'));
+router.post('/auth/refresh', refreshLimiter, authenticateRefreshToken('doctor'));
 
 router.post('/addNewPatientInfo', (req, res, next) => authenticateToken('doctor', req, res, next), addNewPatientGet);
 router.post(

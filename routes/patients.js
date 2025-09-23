@@ -11,6 +11,7 @@ const { check, validationResult } = require('express-validator');
 const { authenticateToken, authenticateRefreshToken } = require('../middleware/session-authentication-middleware');
 const { getAllDoctors, addNewPatientPost, addNewPatientGet } = require('../controllers/doctors');
 const { getUserProfile, resetPassword } = require('../controllers/userInfo');
+const { refreshLimiter } = require('../controllers/utils/functions');
 
 router.post('/getUserProfile/:id', (req, res, next) => authenticateToken('patient', req, res, next), getUserProfile);
 router.post(
@@ -150,6 +151,6 @@ router.post('/logout', (req, res) => {
     return res.json({ success: true, message: 'Signout success!' });
 });
 
-router.post('/auth/refresh', authenticateRefreshToken('patient'));
+router.post('/auth/refresh', refreshLimiter, authenticateRefreshToken('patient'));
 
 module.exports = router;

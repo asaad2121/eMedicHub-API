@@ -9,7 +9,7 @@ const pharmaRouter = require('./routes/pharmacy');
 const ordersRouter = require('./routes/orders');
 const { csrfSync } = require('csrf-sync');
 const session = require('express-session');
-const { refreshLimiter } = require('./controllers/utils/functions');
+const { apiLimiter, refreshLimiter } = require('./controllers/utils/functions');
 
 const app = express();
 
@@ -49,10 +49,10 @@ app.use(
     })
 );
 
-app.use('/patients', refreshLimiter, patientsRouter);
-app.use('/doctors', refreshLimiter, doctorsRouter);
-app.use('/pharma', refreshLimiter, pharmaRouter);
-app.use('/orders', refreshLimiter, ordersRouter);
+app.use('/patients', apiLimiter, patientsRouter);
+app.use('/doctors', apiLimiter, doctorsRouter);
+app.use('/pharma', apiLimiter, pharmaRouter);
+app.use('/orders', apiLimiter, ordersRouter);
 
 app.get('/', (req, res) => res.status(200).send('OK'));
 
