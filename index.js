@@ -43,11 +43,7 @@ app.get('/csrf-token', apiLimiter, (req, res) => {
     res.json({ csrfToken: generateToken(req, true) });
 });
 
-const csrfExclusionPaths = ['/doctors/login', '/patients/login', '/patients/signup', '/pharma/login'];
-app.use((req, res, next) => {
-    if (csrfExclusionPaths.includes(req.path)) return next();
-    csrfSynchronisedProtection(req, res, next);
-});
+app.use(csrfSynchronisedProtection);
 
 app.use((err, req, res, next) => {
     if (err.code !== 'EBADCSRFTOKEN') return next(err);
