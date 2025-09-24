@@ -43,7 +43,7 @@ app.use(
     })
 );
 
-app.get('/csrf-token', refreshLimiter, (req, res) => {
+app.get('/csrf-token', apiLimiter, (req, res) => {
     res.json({ csrfToken: generateToken(req, true) });
 });
 

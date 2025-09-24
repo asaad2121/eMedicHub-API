@@ -416,15 +416,22 @@ const getDoctorAppointmentsDashboard = async (req, res) => {
         const scanResult = await client.send(scanCommand);
         const appointments = scanResult.Items || [];
 
-        const todayAppointments = appointments.filter((a) => {
-            const apptDate = new Date(a.date?.S).toISOString().split('T')[0];
-            const todayDate = new Date().toISOString().split('T')[0];
-            return apptDate === todayDate;
-        });
+        const mappedAppointments = appointments.map((a) => ({
+            id: a.id?.S,
+            doctor_id: a.doctor_id?.S,
+            patient_id: a.patient_id?.S,
+            date: a.date?.S,
+            start_time: a.start_time?.S,
+            end_time: a.end_time?.S,
+            note: a.note?.S || '',
+            status: a.status?.S || 'Upcoming',
+        }));
 
-        const { completed, upcoming } = appointments.reduce(
+        const todayAppointments = mappedAppointments.filter((a) => a.date === today);
+
+        const { completed, upcoming } = todayAppointments.reduce(
             (acc, a) => {
-                if (a.status?.S === 'Completed') acc.completed++;
+                if (a.status === 'Completed') acc.completed++;
                 else acc.upcoming++;
                 return acc;
             },
