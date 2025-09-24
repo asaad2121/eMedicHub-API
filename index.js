@@ -16,6 +16,17 @@ const app = express();
 app.use(bodyParser.json());
 app.use(cookieParser());
 
+const allowedOrigins = [process.env.ANGULAR_APP_URL, process.env.ANGULAR_APP_WEB_URL];
+
+app.use(
+    cors({
+        origin: function (origin, callback) {
+            if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+        },
+        credentials: true,
+    })
+);
+
 app.use(
     session({
         secret: process.env.SESSION_SECRET,
@@ -38,16 +49,6 @@ app.use((err, req, res, next) => {
     res.status(403).json({ success: false, message: 'Invalid CSRF token' });
 });
 
-const allowedOrigins = [process.env.ANGULAR_APP_URL, process.env.ANGULAR_APP_WEB_URL];
-
-app.use(
-    cors({
-        origin: function (origin, callback) {
-            if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
-        },
-        credentials: true,
-    })
-);
 
 app.use('/patients', apiLimiter, patientsRouter);
 app.use('/doctors', apiLimiter, doctorsRouter);
