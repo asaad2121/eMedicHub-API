@@ -9,7 +9,7 @@ const pharmaRouter = require('./routes/pharmacy');
 const ordersRouter = require('./routes/orders');
 const { csrfSync } = require('csrf-sync');
 const session = require('express-session');
-const { apiLimiter, refreshLimiter } = require('./controllers/utils/functions');
+const { apiLimiter } = require('./controllers/utils/functions');
 
 const app = express();
 
@@ -20,8 +20,9 @@ const allowedOrigins = [process.env.ANGULAR_APP_URL, process.env.ANGULAR_APP_WEB
 
 app.use(
     cors({
-        origin: function (origin, callback) {
+        origin: (origin, callback) => {
             if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+            return callback(new Error('Not allowed by CORS'));
         },
         credentials: true,
     })
@@ -42,7 +43,11 @@ app.get('/csrf-token', apiLimiter, (req, res) => {
     res.json({ csrfToken: generateToken(req, true) });
 });
 
-app.use(csrfSynchronisedProtection);
+const csrfExclusionPaths = ['/doctors/login', '/patients/login', '/patients/signup', '/pharma/login'];
+app.use((req, res, next) => {
+    if (csrfExclusionPaths.includes(req.path)) return next();
+    csrfSynchronisedProtection(req, res, next);
+});
 
 app.use((err, req, res, next) => {
     if (err.code !== 'EBADCSRFTOKEN') return next(err);
