@@ -27,12 +27,6 @@ app.use(
 
 const { csrfSynchronisedProtection, generateToken } = csrfSync();
 
-app.get('/csrf-token', refreshLimiter, (req, res) => {
-    res.json({ csrfToken: generateToken(req, true) });
-});
-
-app.use(csrfSynchronisedProtection);
-
 app.use((err, req, res, next) => {
     if (err.code !== 'EBADCSRFTOKEN') return next(err);
     res.status(403).json({ success: false, message: 'Invalid CSRF token' });
@@ -48,6 +42,12 @@ app.use(
         credentials: true,
     })
 );
+
+app.get('/csrf-token', refreshLimiter, (req, res) => {
+    res.json({ csrfToken: generateToken(req, true) });
+});
+
+app.use(csrfSynchronisedProtection);
 
 app.use('/patients', apiLimiter, patientsRouter);
 app.use('/doctors', apiLimiter, doctorsRouter);
