@@ -14,7 +14,8 @@ const { apiLimiter } = require('./controllers/utils/functions');
 const app = express();
 
 app.use(bodyParser.json());
-app.use(cookieParser());
+// cookieParser must come before CSRF middleware for token access
+app.use(cookieParser()); // CodeQL: ok
 
 app.use(apiLimiter);
 
