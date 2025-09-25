@@ -50,7 +50,6 @@ app.use((err, req, res, next) => {
     res.status(403).json({ success: false, message: 'Invalid CSRF token' });
 });
 
-
 app.use('/patients', apiLimiter, patientsRouter);
 app.use('/doctors', apiLimiter, doctorsRouter);
 app.use('/pharma', apiLimiter, pharmaRouter);

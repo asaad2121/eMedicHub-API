@@ -35,7 +35,6 @@ const authenticateToken = (type, req, res, next) => {
 
             const expirationTime = user.exp * 1000;
             const currentTime = Date.now();
-            const renewalThreshold = 5 * 60 * 1000; // 5 minutes
 
             if (expirationTime - currentTime < renewalThreshold) {
                 const newToken = jwt.sign(
@@ -62,19 +61,12 @@ const authenticateToken = (type, req, res, next) => {
     });
 };
 
-const authenticateRefreshToken = (type) => (req, res) => {
+const authenticateRefreshToken = (type) => async (req, res) => {
     const token = req.cookies[`refresh_token_${type}`];
-
-    if (!token) {
-        return res.status(401).json({ success: false, message: 'Unauthorized: No refresh token provided.' });
-    }
+    if (!token) return res.status(401).json({ success: false, message: 'No refresh token provided' });
 
     jwt.verify(token, process.env.JWT_REFRESH_SECRET, async (err, user) => {
-        if (err) {
-            return res
-                .status(403)
-                .json({ success: false, message: 'Forbidden: Invalid refresh token. Please log in again.' });
-        }
+        if (err) return res.status(403).json({ success: false, message: 'Invalid refresh token' });
 
         let tableName;
         if (user._id.startsWith('DOC')) tableName = 'Doctors';
@@ -82,53 +74,55 @@ const authenticateRefreshToken = (type) => (req, res) => {
         else if (user._id.startsWith('PHAR')) tableName = 'Pharmacy';
         else return res.status(400).json({ success: false, message: 'Invalid user ID prefix' });
 
-        const getCmd = new GetItemCommand({
-            TableName: tableName,
-            Key: { id: { S: user._id } },
-            ProjectionExpression: 'last_password_update_utc',
-        });
+        try {
+            const getCmd = new GetItemCommand({
+                TableName: tableName,
+                Key: { id: { S: user._id } },
+                ProjectionExpression: 'last_password_update_utc',
+            });
 
-        const result = await client.send(getCmd);
-        const lastPwUpdateDb = result.Item?.last_password_update_utc?.S;
+            const result = await client.send(getCmd);
+            const lastPwUpdateDb = result.Item?.last_password_update_utc?.S;
 
-        if (lastPwUpdateDb) {
-            const dbDate = new Date(lastPwUpdateDb).getTime();
-            const tokenDate = new Date(user.lastPwUpdate || 0).getTime();
-            if (dbDate > tokenDate) {
-                return res.status(401).json({
-                    success: false,
-                    message: 'Session expired. Please log in again.',
-                });
+            if (lastPwUpdateDb) {
+                const dbTime = new Date(lastPwUpdateDb).getTime();
+                const tokenTime = new Date(user.lastPwUpdate || 0).getTime();
+                if (dbTime > tokenTime) {
+                    return res.status(401).json({ success: false, message: 'Session expired. Please log in again.' });
+                }
             }
+
+            const newAccessToken = jwt.sign(
+                { _id: user._id, lastPwUpdate: lastPwUpdateDb || user.lastPwUpdate || null },
+                process.env.JWT_SECRET,
+                { expiresIn: '30m' }
+            );
+
+            const newRefreshToken = jwt.sign(
+                { _id: user._id, lastPwUpdate: lastPwUpdateDb || user.lastPwUpdate || null },
+                process.env.JWT_REFRESH_SECRET,
+                { expiresIn: '7d' }
+            );
+
+            res.cookie(`jwt_${type}`, newAccessToken, {
+                httpOnly: true,
+                maxAge: 1800000,
+                secure: process.env.ENVIRONMENT === 'prod',
+                sameSite: process.env.ENVIRONMENT === 'prod' ? 'None' : 'Lax',
+            });
+
+            res.cookie(`refresh_token_${type}`, newRefreshToken, {
+                httpOnly: true,
+                maxAge: 7 * 24 * 60 * 60 * 1000,
+                secure: process.env.ENVIRONMENT === 'prod',
+                sameSite: process.env.ENVIRONMENT === 'prod' ? 'None' : 'Lax',
+            });
+
+            res.status(200).json({ success: true, message: 'Tokens refreshed successfully' });
+        } catch (e) {
+            console.error('Refresh token DB check failed:', e);
+            return res.status(500).json({ success: false, message: 'Internal server error' });
         }
-
-        const newAccessToken = jwt.sign(
-            { _id: user._id, lastPwUpdate: lastPwUpdateDb || user.lastPwUpdate || null },
-            process.env.JWT_SECRET,
-            { expiresIn: '30m' }
-        );
-
-        const newRefreshToken = jwt.sign(
-            { _id: user._id, lastPwUpdate: lastPwUpdateDb || user.lastPwUpdate || null },
-            process.env.JWT_REFRESH_SECRET,
-            { expiresIn: '7d' }
-        );
-
-        res.cookie(`jwt_${type}`, newAccessToken, {
-            httpOnly: true,
-            maxAge: 1800000,
-            secure: process.env.ENVIRONMENT === 'prod',
-            sameSite: process.env.ENVIRONMENT === 'prod' ? 'None' : 'Lax',
-        });
-
-        res.cookie(`refresh_token_${type}`, newRefreshToken, {
-            httpOnly: true,
-            maxAge: 604800000,
-            secure: process.env.ENVIRONMENT === 'prod',
-            sameSite: process.env.ENVIRONMENT === 'prod' ? 'None' : 'Lax',
-        });
-
-        res.status(200).json({ success: true, message: 'Tokens refreshed successfully' });
     });
 };
 
