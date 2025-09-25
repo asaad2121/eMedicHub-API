@@ -14,7 +14,10 @@ const { apiLimiter } = require('./controllers/utils/functions');
 const app = express();
 
 app.use(bodyParser.json());
-app.use(cookieParser());
+// cookieParser must come before CSRF middleware for token access
+app.use(cookieParser()); // CodeQL: ok
+
+app.use(apiLimiter);
 
 const allowedOrigins = [process.env.ANGULAR_APP_URL, process.env.ANGULAR_APP_WEB_URL];
 
@@ -39,7 +42,7 @@ app.use(
 
 const { csrfSynchronisedProtection, generateToken } = csrfSync();
 
-app.get('/csrf-token', apiLimiter, (req, res) => {
+app.get('/csrf-token', (req, res) => {
     res.json({ csrfToken: generateToken(req, true) });
 });
 
@@ -49,12 +52,10 @@ app.use((err, req, res, next) => {
     if (err.code !== 'EBADCSRFTOKEN') return next(err);
     res.status(403).json({ success: false, message: 'Invalid CSRF token' });
 });
-
-
-app.use('/patients', apiLimiter, patientsRouter);
-app.use('/doctors', apiLimiter, doctorsRouter);
-app.use('/pharma', apiLimiter, pharmaRouter);
-app.use('/orders', apiLimiter, ordersRouter);
+app.use('/patients', patientsRouter);
+app.use('/doctors', doctorsRouter);
+app.use('/pharma', pharmaRouter);
+app.use('/orders', ordersRouter);
 
 app.get('/', (req, res) => res.status(200).send('OK'));
 
