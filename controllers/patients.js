@@ -384,7 +384,7 @@ const getPatientDashboard = async (req, res) => {
                 date: a.date.S,
                 start_time: a.start_time?.S || '',
                 end_time: a.end_time?.S || '',
-                notes: a.notes?.S || '',
+                note: a.note?.S || '',
             }))
             .sort((a, b) => new Date(`${a.date}T${a.start_time}`) - new Date(`${b.date}T${b.start_time}`))
             .slice(0, 3);
