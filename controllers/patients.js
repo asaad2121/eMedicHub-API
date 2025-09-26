@@ -248,7 +248,7 @@ const viewAppointments = async (req, res) => {
         );
 
         const doctorSpecialityMap = Object.fromEntries(
-            (batchResult.Responses?.Doctors || []).map((d) => [d.id.S, d.speciality?.S || ''])
+            (batchResult.Responses?.Doctors || []).map((d) => [d.id.S, d.speciality?.S || 'General Practitioner'])
         );
 
         const mappedAppointments = appointments.map((a) => {
@@ -360,31 +360,65 @@ const viewAppointmentData = async (req, res) => {
 const getPatientDashboard = async (req, res) => {
     try {
         const { patient_id } = req.body;
-
         if (!patient_id) return res.status(400).json({ success: false, message: 'patient_id is required' });
+
+        const todayStr = new Date().toISOString().split('T')[0];
 
         const appointmentScan = new ScanCommand({
             TableName: 'Appointments',
-            FilterExpression: 'patient_id = :patId AND #time >= :now',
+            FilterExpression: 'patient_id = :patId AND #date >= :today',
             ExpressionAttributeValues: {
                 ':patId': { S: patient_id },
-                ':now': { S: new Date().toISOString() },
+                ':today': { S: todayStr },
             },
             ExpressionAttributeNames: {
-                '#time': 'time',
+                '#date': 'date',
             },
         });
 
         const appointmentResult = await client.send(appointmentScan);
-        const appointments = (appointmentResult.Items || [])
+        let appointments = (appointmentResult.Items || [])
             .map((a) => ({
                 id: a.id.S,
                 doctor_id: a.doctor_id.S,
-                time: a.time.S,
+                date: a.date.S,
+                start_time: a.start_time?.S || '',
+                end_time: a.end_time?.S || '',
                 notes: a.notes?.S || '',
             }))
-            .sort((a, b) => new Date(a.time) - new Date(b.time))
+            .sort((a, b) => new Date(`${a.date}T${a.start_time}`) - new Date(`${b.date}T${b.start_time}`))
             .slice(0, 3);
+
+        const doctorIds = [...new Set(appointments.map((a) => a.doctor_id))];
+
+        let doctorMap = {};
+        if (doctorIds?.length > 0) {
+            const doctorBatch = new BatchGetItemCommand({
+                RequestItems: {
+                    Doctors: {
+                        Keys: doctorIds.map((id) => ({ id: { S: id } })),
+                        ProjectionExpression: 'id, first_name, last_name, speciality',
+                    },
+                },
+            });
+            const doctorResult = await client.send(doctorBatch);
+
+            doctorMap = Object.fromEntries(
+                (doctorResult.Responses?.Doctors || []).map((d) => [
+                    d.id.S,
+                    {
+                        name: `${d.first_name?.S || ''} ${d.last_name?.S || ''}`.trim(),
+                        speciality: d.speciality?.S || 'General Practitioner',
+                    },
+                ])
+            );
+
+            appointments = appointments.map((a) => ({
+                ...a,
+                doctor_name: doctorMap[a.doctor_id]?.name || '',
+                speciality: doctorMap[a.doctor_id]?.speciality || '',
+            }));
+        }
 
         const ordersScan = new ScanCommand({
             TableName: 'Orders',
@@ -416,7 +450,7 @@ const getPatientDashboard = async (req, res) => {
 
             if (o.status.S === 'Ready' && ordersReady.length < 3) {
                 ordersReady.push(orderObj);
-            } else if (ordersNotReady.length < 3) {
+            } else if (o.status.S !== 'Ready' && ordersNotReady?.length < 3) {
                 ordersNotReady.push(orderObj);
             }
         });

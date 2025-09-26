@@ -20,7 +20,6 @@ const getDayOfWeek = (dateStr) => {
 
 const getAvailableSlots = (visitingHours, appointments, slotDuration = 30) => {
     const slots = [];
-    console.log(visitingHours);
     const start = parseTime(visitingHours.start);
     const end = parseTime(visitingHours.end);
 
