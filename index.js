@@ -36,9 +36,14 @@ app.use(
         secret: process.env.SESSION_SECRET,
         resave: false,
         saveUninitialized: true,
-        cookie: { secure: process.env.ENVIRONMENT === 'prod' },
+        cookie: {
+            secure: process.env.ENVIRONMENT === 'prod',
+            httpOnly: true,
+            sameSite: process.env.ENVIRONMENT === 'prod' ? 'None' : 'Lax',
+        },
     })
 );
+
 
 const { csrfSynchronisedProtection, generateToken } = csrfSync();
 
