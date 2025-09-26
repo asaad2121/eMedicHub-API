@@ -457,10 +457,12 @@ const getPatientDashboard = async (req, res) => {
 
         return res.status(200).json({
             success: true,
-            patient_id,
-            appointments,
-            ordersReady,
-            ordersNotReady,
+            data: {
+                patient_id,
+                appointments,
+                ordersReady,
+                ordersNotReady,
+            }
         });
     } catch (err) {
         console.error('Error fetching patient dashboard:', err);
