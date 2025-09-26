@@ -19,16 +19,27 @@ app.use(cookieParser()); // CodeQL: ok
 
 app.use(apiLimiter);
 
-const allowedOrigins = [process.env.ANGULAR_APP_URL, process.env.ANGULAR_APP_WEB_URL];
+const allowedOrigins = [
+    'https://127.0.0.1:4200',
+    'http://127.0.0.1:4200',
+    'http://localhost:4200',
+    'https://localhost:4200',
+    'https://192.168.1.6:4200',
+    'http://192.168.1.6:4200',
+    process.env.ANGULAR_APP_URL,
+    process.env.ANGULAR_APP_WEB_URL
+];
+// Change ENVIRONMENT=prod in .env
 
 app.use(
-    cors({
-        origin: (origin, callback) => {
-            if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
-            return callback(new Error('Not allowed by CORS'));
-        },
-        credentials: true,
-    })
+  cors({
+    origin: (origin, callback) => {
+      console.log('CORS check for origin:', origin); // debug
+      if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+      return callback(new Error('Not allowed by CORS'));
+    },
+    credentials: true,
+  })
 );
 
 app.use(
