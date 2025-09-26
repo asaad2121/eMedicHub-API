@@ -35,6 +35,7 @@ const authenticateToken = (type, req, res, next) => {
 
             const expirationTime = user.exp * 1000;
             const currentTime = Date.now();
+            const renewalThreshold = 5 * 60 * 1000; // 5 minutes
 
             if (expirationTime - currentTime < renewalThreshold) {
                 const newToken = jwt.sign(
