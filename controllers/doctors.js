@@ -178,6 +178,22 @@ const addNewPatientPost = async (req, res) => {
         if (dobDate >= today) {
             return res.status(400).json({ success: false, message: 'Date of birth must be before today' });
         }
+
+        const emailQuery = new QueryCommand({
+            TableName: 'Patients',
+            IndexName: 'email-index',
+            KeyConditionExpression: 'email = :email',
+            ExpressionAttributeValues: {
+                ':email': { S: email },
+            },
+            Limit: 1,
+        });
+
+        const emailResult = await client.send(emailQuery);
+
+        if (emailResult.Count > 0) {
+            return res.status(409).json({ success: false, message: 'Patient with this email already exists' });
+        }
         const hashedPassword = await generateHashedPassword(password);
 
         const patientItem = {
