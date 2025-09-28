@@ -130,6 +130,7 @@ async function main() {
         await waitForTableActive('Appointments');
 
         // Create OrderCounter table and wait for it to be ACTIVE
+        await runScript('node scripts/create-order-counter-table.js');
         await runScript('node scripts/populate-order-counter.js');
         await waitForTableActive('OrderCounter');
 

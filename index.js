@@ -13,6 +13,8 @@ const { apiLimiter } = require('./controllers/utils/functions');
 
 const app = express();
 
+app.set('trust proxy', 1);
+
 app.use(bodyParser.json());
 // cookieParser must come before CSRF middleware for token access
 app.use(cookieParser()); // CodeQL: ok
