@@ -35,7 +35,6 @@ This uses `nodemon` to auto-reload on changes.
 | ---------------- | ----------------------------- |
 | `npm run dev`    | Start server with **nodemon** |
 | `npm run format` | Format code with **Prettier** |
-| `npm test`       | Placeholder for running tests |
 
 ---
 
@@ -74,8 +73,7 @@ emedichub-api/
 ├── index.js                # Entry point
 ├── routes/               # API route handlers
 ├── controllers/          # Logic for each route
-├── middleware/           # Auth, error handling, etc.
-├── models/               # DB models/schemas (if any)
+├── middleware/           # Auth handling
 ├── .env                  # Environment variables
 ├── package.json
 └── README.md
