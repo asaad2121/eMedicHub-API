@@ -70,8 +70,7 @@ const loginPharma = async (req, res) => {
 
         const userData = {
             id: pharma.id.S,
-            first_name: pharma.first_name?.S,
-            last_name: pharma.last_name?.S,
+            name: pharma.name?.S,
             email: pharma.email.S,
             type: 'pharma',
             token,
