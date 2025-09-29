@@ -247,12 +247,12 @@ const viewPatients = async (req, res) => {
         if (lastAppointmentStart) {
             start = parseISO(lastAppointmentStart);
             if (isNaN(start.getTime())) return res.status(400).json({ success: false, message: 'Invalid start date' });
-        } else start = new Date('1900-01-01');
+        }
 
         if (lastAppointmentEnd) {
             end = parseISO(lastAppointmentEnd);
             if (isNaN(end.getTime())) return res.status(400).json({ success: false, message: 'Invalid end date' });
-        } else end = new Date();
+        }
 
         if (!doctor_id) return res.status(400).json({ success: false, message: 'doctor_id is required' });
 
@@ -384,8 +384,6 @@ const viewPatients = async (req, res) => {
                 const patientIdsWithAppointments = new Set(appointmentsResult.Items?.map((a) => a.patient_id.S));
 
                 mappedPatients = mappedPatients.filter((p) => patientIdsWithAppointments.has(p.id));
-            } else {
-                mappedPatients = [];
             }
         }
 

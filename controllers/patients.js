@@ -462,7 +462,7 @@ const getPatientDashboard = async (req, res) => {
                 appointments,
                 ordersReady,
                 ordersNotReady,
-            }
+            },
         });
     } catch (err) {
         console.error('Error fetching patient dashboard:', err);
