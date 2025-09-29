@@ -46,7 +46,6 @@ app.use(
     })
 );
 
-
 const { csrfSynchronisedProtection, generateToken } = csrfSync();
 
 app.get('/csrf-token', (req, res) => {
